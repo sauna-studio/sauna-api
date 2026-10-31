@@ -20,3 +20,6 @@ coverage/
 *.p12
 *.p8
 *.key
+__pycache__/
+*.pyc
+.venv/
