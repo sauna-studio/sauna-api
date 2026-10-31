@@ -59,3 +59,15 @@ PRには関連Issue、何が変わるか、実行したチェックと結果、�
 現在はOpenAPIのhealth/version契約と生成Swiftコードのbuild/testのみを提供する。`Sources/SaunaAPIContract/openapi.yaml`を契約の正本とし、生成物をコミットしない。`swift build --force-resolved-versions` / `swift test --force-resolved-versions`を実行する。Python 3.11以上で`pip install -r scripts/requirements.txt`後、`python scripts/validate_openapi.py`と`python -m unittest discover -s scripts -p 'test_*.py' -v`を実行する。
 
 `/health`はDB readinessと分離したliveness、`/version`は公開release版だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTPサーバ・DB・認証はまだ未実装なので、生成compileの成功をHTTP動作確認済みと記録しない。実サーバ・port・graceful shutdownはMVP-002で追加する。
+
+## GitHub Codexレビューとマージ条件
+
+1. PRの自動Codexレビューを確認する。指摘ごとに根拠を確認し、必要なコード修正・回帰テストを行う。
+2. 各レビューthreadに、修正内容・commit・検証結果を返信する。対応不要と判断した場合も理由を説明し、未解決事項を隠さない。
+3. 対応後にPRへ正確に `@codex review` とコメントし、新しいレビューを依頼する。最新commitに対するレビュー結果を待つ。
+4. 新しい指摘があれば同じ処理を繰り返す。GitHubのCodexが指摘なしと示し、未対応の指摘がなく、必須CIが成功した後だけマージする。
+5. レビュー未着・連携未設定・利用上限・実行失敗は指摘なしと見なさない。原因と依頼URLを記録し、PRを開いたままにする。独立ローカルReview Agentの合格でこの条件を代替しない。
+
+このGitHub上のレビューは、実装中の独立Review Agent並行起動と実ビルド・テストに追加する確認である。レビュー依頼だけで成功扱いにしない。自動返信・同じ依頼の連投を避け、レビューroundと対象commitをPRへ記録する。
+
+共通追加規則の適用元: `sauna-studio/.github@e24383d0f9fe6784293e1b781edffd08750f0a20` (`policies/github-codex-review.md`)。
