@@ -37,4 +37,8 @@ Atlas CE1.3.0で初回migration生成、空replayへの適用と二度目差分�
 
 ## 施設アクセス・challenge追加段階
 
-2施設のSwiftアクセス層とchallenge migrationを追加。host Swift38tests（Server10/Database23/Contract5）を実DBで検証。追加SQL8拒否と既存21拒否、Python26testsも成功。独立Review Agentも38件をskipなしで再実行し成功。外部moduleでのinitializer/Decodable生成拒否を、現行targetをbuildするscriptでも確認した。Security Reviewはdomain error型保持・secret非出力・実DB権限を確認しblocking指摘なし。Linux build結果は完了後に追記する。署名/UV検証、session/Workspaceと公開業務HTTPは未実装。
+2施設のSwiftアクセス層とchallenge migrationを追加。host Swift38tests（Server10/Database23/Contract5）を実DBで検証。追加SQL8拒否と既存21拒否、Python26testsも成功。独立Review Agentも38件をskipなしで再実行し成功。外部moduleでのinitializer/Decodable生成拒否を、現行targetをbuildするscriptでも確認した。Security Reviewはdomain error型保持・secret非出力・実DB権限を確認しblocking指摘なし。最終sourceのApple container/Linux arm64 release build/testも成功。38定義のうちDB14件はsecret非渡しでskip、残り24件が成功。skipした14件はhostで実DB接続し成功している。署名/UV検証、session/Workspaceと公開業務HTTPは未実装。
+
+swift-webauthnは隔離した公式beta1で上流38tests、修正済main固定commitで63tests成功。Sauna依存への追加は行わず、評価/未検証範囲はWEBAUTHN_EVALUATION.mdに記録した。
+
+最終imageへのAPI再起動後にhealth/version、利用者/管理者Webからのapi:smoke、両WebのHTTP200を確認。Bunの最初の呼出は子process用PATH未設定で127終了し、workspace-local BunをPATHへ設定して両方を再実行し成功した（ソース変更なし）。
