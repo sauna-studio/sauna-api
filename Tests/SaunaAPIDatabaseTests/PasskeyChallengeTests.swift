@@ -3,6 +3,7 @@ import Logging
 import PostgresNIO
 import Testing
 @testable import SaunaAPIDatabase
+@testable import SaunaAPIIdentity
 
 private let challengeLogger = Logger(label: "SaunaChallengeTests") { _ in SwiftLogNoOpLogHandler() }
 
@@ -65,7 +66,7 @@ struct PasskeyChallengeTests {
             #expect(first.challenge.count == 32)
             let storedHashes = try await connection.query("SELECT binding_hash FROM public.webauthn_challenges WHERE id=\(first.id)", logger: challengeLogger)
             for try await hash in storedHashes.decode(Data.self) {
-                let raw = Data(base64Encoded: binding.encoded.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/") + "=")!
+                let raw = Data(base64Encoded: binding.encoded.replacing("-", with: "+").replacing("_", with: "/") + "=")!
                 let hashOnly = hash.count == 32 && hash != raw
                 #expect(hashOnly)
             }

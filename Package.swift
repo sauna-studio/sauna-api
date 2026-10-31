@@ -54,7 +54,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", exact: "1.16.2"),
     ],
     targets: [
-        .target(name: "SaunaAPIIdentity", swiftSettings: apiSwiftSettings),
+        .target(name: "SaunaAPIIdentity", dependencies: [.product(name: "NIOCore", package: "swift-nio"), .product(name: "ISO 9075 Foundation", package: "swift-iso-9075"), .product(name: "PostgreSQL", package: "swift-postgresql"), .product(name: "SQL", package: "swift-sql"), .product(name: "SQL Macros", package: "swift-sql"), .product(name: "SQL Foundation Integration", package: "swift-sql"), .product(name: "WebAuthn", package: "swift-webauthn"), .product(name: "CBOR", package: "swift-cbor"), .product(name: "Crypto", package: "swift-crypto"), .product(name: "PostgresNIO", package: "postgres-nio"), .product(name: "Logging", package: "swift-log")], swiftSettings: apiSwiftSettings),
+        .testTarget(name: "SaunaAPIIdentityTests", dependencies: ["SaunaAPIDatabase", "SaunaAPIIdentity", .product(name: "WebAuthn", package: "swift-webauthn"), .product(name: "CBOR", package: "swift-cbor"), .product(name: "Crypto", package: "swift-crypto"), .product(name: "PostgresNIO", package: "postgres-nio"), .product(name: "Logging", package: "swift-log")]),
         .target(name: "SaunaAPIDatabase", dependencies: [.product(name: "Crypto", package: "swift-crypto"), "SaunaAPIIdentity", .product(name: "PostgresNIO", package: "postgres-nio"), .product(name: "Logging", package: "swift-log")], swiftSettings: apiSwiftSettings),
         .executableTarget(name: "SaunaDBCheck", dependencies: ["SaunaAPIDatabase"], swiftSettings: apiSwiftSettings),
         .testTarget(name: "SaunaAPIDatabaseTests", dependencies: ["SaunaAPIDatabase", "SaunaAPIIdentity", .product(name: "Logging", package: "swift-log"), .product(name: "PostgresNIO", package: "postgres-nio")]),
@@ -72,7 +73,10 @@ let package = Package(
         .target(
             name: "SaunaAPIServer",
             dependencies: [
-                "SaunaAPIContract",
+                "SaunaAPIContract", "SaunaAPIIdentity",
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+                .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
+                .product(name: "PostgresNIO", package: "postgres-nio"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "OpenAPIHummingbird", package: "swift-openapi-hummingbird"),
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
@@ -81,13 +85,16 @@ let package = Package(
         ),
         .executableTarget(
             name: "SaunaAPI",
-            dependencies: ["SaunaAPIServer", .product(name: "Hummingbird", package: "hummingbird")],
+            dependencies: ["SaunaAPIServer", "SaunaAPIDatabase", "SaunaAPIIdentity", .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"), .product(name: "PostgresNIO", package: "postgres-nio"), .product(name: "Hummingbird", package: "hummingbird")],
             swiftSettings: apiSwiftSettings
         ),
         .testTarget(
             name: "SaunaAPIServerTests",
             dependencies: [
-                "SaunaAPIContract", "SaunaAPIServer", "SaunaAPI",
+                "SaunaAPIContract", "SaunaAPIServer", "SaunaAPI", "SaunaAPIDatabase", "SaunaAPIIdentity",
+                .product(name: "PostgresNIO", package: "postgres-nio"),
+                .product(name: "HTTPTypes", package: "swift-http-types"),
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
             ],
             resources: [.copy("Fixtures")]

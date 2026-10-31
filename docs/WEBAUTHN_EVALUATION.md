@@ -32,3 +32,13 @@ In the inspected beta/main source, CollectedClientData models type/challenge/ori
 No user credential or real customer data was used. Upstream public test fixtures and ephemeral test-generated cryptographic material are not production credentials; private values were not displayed or copied into the report. The upstream Package/Sources/Tests safety review found no build plugin target execution or process/network/credential-access side effects in test source; a docc plugin package is declared as a dependency but not attached to build targets.
 
 Browser virtual-authenticator integration, real Safari/iOS Passkeys, Linux/Apple-container build of this library, counter policy for synced credentials and a full integration security review remain unverified. A released version compatible with current dependencies is preferable; an unreleased exact SHA needs an ADR and explicit update/exit criteria before adoption.
+
+## 2026-11-01 上流PR128とswift-cborの採用
+
+最新ユーザー指示に従い、[swift-webauthn PR128](https://github.com/brokenhandsio/swift-webauthn/pull/128/)（head `3fe310ab82b4c7dc5429ca3dbcc1308b3ff8abbb`）を採用する。必要な独自修正はこのcommitを祖先に持つ自前fork branch `codex/pr128-compat`へ重ね、以前のadd-init/Crypto互換PRは採用しない。現行APIでは追加のpublic Credential initializerを使わないため、その変更は持ち込まない。
+
+PR128は[brokenhandsio/swift-cbor](https://github.com/brokenhandsio/swift-cbor)へ移行済みで、APIの直接利用もproduct `CBOR`へ統一する。安定tag0.2.0（`52432a1118bcbabb9a973330c3af85d8ddf3f015`）を採用する。入力全体を消費する`CBOR.decode`に`maximumDepth:16`と`rejectDuplicateMapKeys:true`を明示する。既存の入力長・構造制限を維持し、以前のdecoder用custom input streamは削除する。
+
+SwiftCBOR forkの既知PR120修正は以前のWebAuthn依存に対する検証履歴として保持するが、新APIの依存グラフには残さない。以前の65tests/実ブラウザー成功は旧依存段階の結果であり、PR128採用後にbuild・実DB・署名/UV・ブラウザーを再検証する。上流PRの採用を上流mainへのmerge済みと表現しない。
+
+Final compatibility branch requires Swift6.4 (the Sauna compiler baseline). Runtime string transformations use native literal collection replacing/append, with no added Foundation import for those transformations. Test-only JSONSerialization imports its defining Foundation module explicitly. The strict main API comparison stays enabled with122exact diagnostics attributable to upstreamPR128; removing one allowed diagnostic makes the negative control fail. Old compiler compatibility shims are deliberately omitted.

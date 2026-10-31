@@ -1,4 +1,6 @@
 public import SaunaAPIContract
+import SaunaAPIIdentity
+public import PostgresNIO
 
 public struct ServiceAPI: APIProtocol {
     // Public release identifiers only. Never derive these from environment or git metadata.
@@ -6,10 +8,12 @@ public struct ServiceAPI: APIProtocol {
     public static let applicationVersion = "0.1.0"
 
     private let isAvailable: Bool
+    let authenticationClient: PostgresClient?
 
     /// The availability override is dependency injection for tests, not a public route or environment switch.
-    public init(isAvailable: Bool = true) {
+    public init(isAvailable: Bool = true, authenticationClient: PostgresClient? = nil) {
         self.isAvailable = isAvailable
+        self.authenticationClient = authenticationClient
     }
 
     public func getHealth(_ input: Operations.GetHealth.Input) async throws -> Operations.GetHealth.Output {

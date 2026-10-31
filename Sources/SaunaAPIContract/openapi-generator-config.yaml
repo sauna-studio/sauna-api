@@ -1,5 +1,11 @@
 generate:
-  - types
-  - server
+- types
+- server
 accessModifier: public
 namingStrategy: idiomatic
+nameOverrides:
+  __Host-sauna-customer-flow: customerFlow
+  __Host-sauna-staff-flow: staffFlow
+  __Host-sauna-customer-session: customerSession
+  __Host-sauna-staff-session: staffSession
+  X-Sauna-CSRF: csrfToken
