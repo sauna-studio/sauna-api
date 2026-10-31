@@ -101,7 +101,8 @@ def main():
         with tempfile.TemporaryDirectory(prefix='sauna-api-context-') as tmp:
             context = Path(tmp)
             stage_context(context)
-            run(['container', 'build', '--platform', 'linux/arm64', '--cpus', '4', '--memory', '4G', '--progress', 'plain', '--file', str(context / 'Containerfile.local'), '--tag', IMAGE, str(context)])
+            # Avoid 4 GiB: the SwiftSyntax/macro build made that guest unresponsive.
+            run(['container', 'build', '--platform', 'linux/arm64', '--cpus', '4', '--memory', '8G', '--progress', 'plain', '--file', str(context / 'Containerfile.local'), '--tag', IMAGE, str(context)])
     elif args.action == 'start':
         # CLI refuses name collisions; never replace an existing container.
         run(start_command(args.port))
