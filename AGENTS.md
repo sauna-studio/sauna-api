@@ -56,9 +56,13 @@ PRには関連Issue、何が変わるか、実行したチェックと結果、�
 
 実装後はswift build / swift test、PostgreSQL 18統合テスト、OpenAPI整合性とAtlas migrationを検証する。
 
-現在はOpenAPIのhealth/version契約と生成Swiftコードのbuild/testのみを提供する。`Sources/SaunaAPIContract/openapi.yaml`を契約の正本とし、生成物をコミットしない。`swift build --force-resolved-versions` / `swift test --force-resolved-versions`を実行する。Python 3.11以上で`pip install -r scripts/requirements.txt`後、`python scripts/validate_openapi.py`と`python -m unittest discover -s scripts -p 'test_*.py' -v`を実行する。
+現在はOpenAPIのhealth/version契約とHummingbird HTTPサーバをローカル開発する。`Sources/SaunaAPIContract/openapi.yaml`を契約の正本とし、生成物をコミットしない。`swift build --force-resolved-versions` / `swift test --force-resolved-versions`を実行する。Python 3.11以上で`pip install -r scripts/requirements.txt`後、`python scripts/validate_openapi.py`と`python -m unittest discover -s scripts -p 'test_*.py' -v`を実行する。
 
-`/health`はDB readinessと分離したliveness、`/version`は公開release版だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTPサーバ・DB・認証はまだ未実装なので、生成compileの成功をHTTP動作確認済みと記録しない。実サーバ・port・graceful shutdownはMVP-002で追加する。
+`/health`はDB readinessと分離したliveness、`/version`は公開release定数だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTP serverの成功/エラー応答、PORT境界値、SIGTERM終了を実HTTP・processテストで確認する。DB poolと接続診断はローカル実装済み。HTTP業務APIとの接続、認証・施設認可は未実装であり、それらを検証済みとは扱わない。
+
+2026-11-01の最新ユーザー指示により、ローカル実装を継続し、適切な単位でpush/PRを作成する。GitHub Codexへの指摘対応・返信・再レビューで指摘なしと必須CI成功を確認後にmergeできる。以前のlocal-only制限はこの指示で更新された。ローカルコンテナはApple `container`を使い、Docker・Docker Composeを使用しない。既存GitHub workflowのSwift containerジョブをローカルで代替実行しない。bind既定値は`127.0.0.1`とし、コンテナ内の`0.0.0.0`は明示設定、ホストへの公開はloopbackのみとする。
+
+API Key・秘密鍵・DB password等が必要になった時点で作業を停止し、ユーザーへ確認する。無断で秘密値を生成したり、既存credentialを探索したり、SSH/TLSのtrust確認を回避したりしない。SwiftPMの同一`.build`を複数Agentで同時変更せず、独立検証は別`--scratch-path`か実行時間を調整する。
 
 ## GitHub Codexレビューとマージ条件
 
@@ -71,3 +75,29 @@ PRには関連Issue、何が変わるか、実行したチェックと結果、�
 このGitHub上のレビューは、実装中の独立Review Agent並行起動と実ビルド・テストに追加する確認である。レビュー依頼だけで成功扱いにしない。自動返信・同じ依頼の連投を避け、レビューroundと対象commitをPRへ記録する。
 
 共通追加規則の適用元: `sauna-studio/.github@e24383d0f9fe6784293e1b781edffd08750f0a20` (`policies/github-codex-review.md`)。
+
+## ローカルDBと外部ライブラリ
+
+この作業ではユーザーがローカルDB専用passwordの生成・私有ファイル保存を明示許可した。既存の.local/secretsを再利用し、上書き/reset/値表示/別APIへの転用をしない。別用途のAPIキー・秘密鍵等が必要なら停止して確認する。admin/appは別credential、appは非superuser・CREATEDB/CREATEROLE/REPLICATION/BYPASSRLSなし。TLS.disableはlocal専用loopback接続だけ。秘密値はファイルからアプリ内で読み、argv・設定dump・raw driver errorへ含めない。
+
+PostgresNIO poolのlifetime/操作/timeoutは同じ構造化TaskGroupでcancelし、行sequenceを実消費する回帰でdeadlineと再接続を検証する。コンテナ/volume操作は所有labelを確認し、他project・既存dataを削除しない。私有directoryをbuild contextに含めない。
+
+公式libraryを優先し、forkが必要なら再現/回帰・最小差分・固定revision・上流PR方針を記録する。現在は公式Hummingbird/SwiftOpenAPI/PostgresNIOの安定releaseを使用している。Web共通stackはSvelteKit/Svelte5Runes/TypeScript/Bun/Vite/Tailwind4/shadcn-svelte/Lucide/Superforms+Zod/openapi-fetch/Vitest/Playwright/ESLint+Prettier。
+
+## ローカルmigration
+
+db/schema.sqlを正本とし、Atlas Community1.3.0でforward-only migrationを生成する。scripts/local_migrations.pyのguard/test/apply/verifyを実行する。過去SQLはtrusted Git baseとのbyte比較で不変とし、atlas.sum更新だけで済ませない。scratch DBは固定名・owner・commentを検証し、永続DB/volumeをresetしない。appへowner/schema CREATE/TRUNCATE/admin membershipを与えない。複合FKは越境参照の整合性だけを保証し、認証済sessionによるAPI施設認可を代替しない。詳細と未完了受入はdocs/LOCAL_MIGRATIONS.mdに記録する。
+
+## 施設アクセスとchallenge
+
+VerifiedSubjectに公開initializer/Decodable/無検証factoryを追加しない。認証producer未実装の間は業務HTTPへ接続しない。全施設操作SQLでmembership/role/facilityを同時検査し、失効後の次statementで拒否する。Workspace確認なしにstaff認可完成と扱わない。
+
+PasskeyFlowBindingはhashだけDB保存、値/nonceをlog・test失敗のmacro展開へ出さない。consumeはlock取得後のDB時刻、exact RP/origin/purpose、未消費状態を同statementで検査し、署名失敗時も復活させない。consumeを認証成功の根拠にしない。ユーザー許可はローカル仮想認証器鍵/専用token生成に限定し、外部APIキーや本番用鍵へ拡大しない。replay DBを使うSwift testsとAtlas resetを同時実行しない。
+
+## API参照実装
+
+ユーザー指定blindlog-api@82a13ed73fff44984e8954781d669cf8320883eaのPackage.swift/構成をAPI実装の基準にする。対応と依存/fork評価はdocs/BLINDLOG_REFERENCE.mdを更新する。自前productiontargetsは共通apiSwiftSettingsを維持し、公開型だけpublic import、欠けたmodule importを明示する。VerifiedSubjectを公開生成可能にしたり生成OpenAPIを編集してbuildを通さない。参照先のメールOTP/Cloudflare/Valkey正本をSaunaへ継承しない。依存は必要性・license・差分を確認し、採用時はrelease/exact revision+lockを固定する。
+
+## Dependabotの扱い
+
+ユーザーの2026-11-01指示により、Dependabotの失敗・通知は対応対象/作業のブロッカーとしない。sauna-api#41のupdater復旧を待たず進める。依存変更そのものは差分とlockfileをレビューし、通常のbuild/test/required checksとCodexレビュー条件を適用する。

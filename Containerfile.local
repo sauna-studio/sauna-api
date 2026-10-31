@@ -1,0 +1,18 @@
+# Local development image built with Apple container. No deployment credentials.
+FROM docker.io/library/swift:6.4.2-noble@sha256:bca121f6eb59fd80340d1296887b2698ed8f3eb9eca7d80c181f8af769dc7ee0 AS build
+WORKDIR /workspace
+COPY Package.swift Package.resolved ./
+COPY Sources ./Sources
+COPY Tests ./Tests
+RUN swift build --configuration release --product SaunaAPI --force-resolved-versions --jobs 4
+RUN swift test --configuration release --force-resolved-versions --jobs 4
+
+# The toolchain base intentionally keeps the matching Swift runtime for local use.
+FROM docker.io/library/swift:6.4.2-noble@sha256:bca121f6eb59fd80340d1296887b2698ed8f3eb9eca7d80c181f8af769dc7ee0 AS local
+WORKDIR /app
+COPY --from=build /workspace/.build/release/SaunaAPI /app/SaunaAPI
+USER 10001:10001
+ENV BIND_HOST=0.0.0.0 PORT=8080
+EXPOSE 8080
+STOPSIGNAL SIGTERM
+ENTRYPOINT ["/app/SaunaAPI"]
