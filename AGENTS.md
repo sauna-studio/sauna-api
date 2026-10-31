@@ -28,6 +28,16 @@ APIは`swift build` / `swift test`とPostgreSQL 18統合テスト、Webはlockfi
 
 `.github`リポジトリで共通基盤を変更するときの検証は`python scripts/validate_repository.py`（Python 3.11以上、`scripts/validation-requirements.txt`を使用）と`actionlint`。他のリポジトリでは末尾の固有指針とREADMEにある実在する検証手順を使う。Reusable Workflowsは呼出先の実コード・lockfile・テストが存在してから有効化する。
 
+## 記述の責務
+
+- **コードには How**：実装方法をコードの構造・名前・処理で表現する。
+- **テストコードには What**：期待する振る舞いと保証する結果を示す。
+- **コミットログには Why**：変更が必要な理由と解決する問題を記録する。
+- **コードコメントには Why not**：代替案を採用しない理由と必要な制約を説明する。
+
+
+Writing-responsibility source: `sauna-studio/.github@8c079a24796dd0f5ea28f3c5e6fb0b017d4c80b6`.
+
 ## セキュリティ
 
 Secrets、トークン、個人情報、実顧客データをコード・ログ・Issue・PRに残さない。認証情報の値を出力しない。施設IDは信頼できるセッションと権限から検証し、全読み書きで施設境界を守る。金額は通貨と最小単位の整数で扱い、クライアントの価格を信頼しない。予約はDBトランザクション・制約・競合テストで過剰予約を防ぐ。Stripe webhookは署名と冪等性を検証し、決済成功をブラウザの戻り値で確定しない。
