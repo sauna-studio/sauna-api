@@ -1,5 +1,6 @@
 import Foundation
 import Logging
+import SaunaAPIIdentity
 public import PostgresNIO
 #if canImport(Darwin)
 import Darwin
@@ -63,6 +64,8 @@ public struct LocalDatabaseConfiguration: Sendable, CustomStringConvertible, Cus
         }
     }
 
+    public func makeClient() -> PostgresClient { client(timeout: .seconds(2)) }
+
     func client(timeout: Duration) -> PostgresClient {
         var configuration = PostgresClient.Configuration(host: host, port: port, username: "sauna_app", password: password, database: database, tls: .disable)
         configuration.options.connectTimeout = min(timeout, .seconds(2))
@@ -111,6 +114,8 @@ public enum LocalDatabase {
             if Task.isCancelled { throw CancellationError() }
             // Preserve only our closed, fixed-message domain errors. Do not
             // generalize this to arbitrary caller/driver errors or descriptions.
+            if let error = error as? AuthenticationError { throw error }
+            if let error = error as? PasskeyVerificationError { throw error }
             if let error = error as? FacilityStoreError { throw error }
             if let error = error as? PasskeyChallengeError { throw error }
             // Never stringify credentials, raw driver errors, queries, or parameter bindings.

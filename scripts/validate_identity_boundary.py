@@ -1,10 +1,38 @@
 #!/usr/bin/env python3
 """Reproduce external-module identity forgery rejection against the current built identity target."""
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def clang_import_flags(build_root, checkouts):
+    """Discover Clang imports omitted by a standalone swiftc invocation.
+
+    SwiftPM's native and Xcode build systems place generated module maps in
+    different directories. Use their declarations instead of target names or
+    dependency versions; skip Swift's generated Objective-C compatibility maps.
+    """
+    flags = []
+    for include in sorted(checkouts.glob('*/Sources/*/include')):
+        if include.is_dir():
+            flags.extend(['-I', str(include.resolve())])
+    seen = set()
+    for path in sorted(build_root.rglob('*.modulemap')):
+        if checkouts in path.parents:
+            continue
+        text = path.read_text()
+        module = re.search(r'\bmodule\s+(\w+)\s*\{', text)
+        headers = re.findall(r'\b(?:umbrella\s+header|header|umbrella)\s+"([^"]+)"', text)
+        if not module or not headers or module[1] in seen:
+            continue
+        if any(header.endswith('-Swift.h') or not (path.parent / header).exists() for header in headers):
+            continue
+        seen.add(module[1])
+        flags.extend(['-Xcc', '-fmodule-map-file=' + str(path.resolve())])
+    return flags
 
 
 def main():
@@ -17,6 +45,7 @@ def main():
     modules = next((p for p in [binary, binary / 'Modules'] if (p / 'SaunaAPIIdentity.swiftmodule').exists()), None)
     if modules is None:
         raise RuntimeError('Build the identity module before running the boundary check')
+    import_flags = clang_import_flags(ROOT / '.build', ROOT / '.build' / 'checkouts')
     probes = [
         ('control', 'import Foundation\nimport SaunaAPIIdentity\nfunc identity(_ value: VerifiedSubject) -> UUID { value.userID }\n', None),
         ('constructor', 'import Foundation\nimport SaunaAPIIdentity\nlet subject = VerifiedSubject(userID: UUID())\n', ('initializer', 'inaccessible', 'internal')),
@@ -26,7 +55,7 @@ def main():
         for name, source, reason in probes:
             path = Path(temporary) / (name + '.swift')
             path.write_text(source)
-            compiled = subprocess.run(['swiftc', '-swift-version', '6', '-typecheck', '-I', str(modules), str(path)], capture_output=True, text=True, timeout=60)
+            compiled = subprocess.run(['swiftc', '-swift-version', '6', '-typecheck', '-I', str(modules), *import_flags, str(path)], capture_output=True, text=True, timeout=60)
             if reason is None:
                 if compiled.returncode:
                     raise RuntimeError('Public identity type control did not compile')

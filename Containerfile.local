@@ -4,8 +4,9 @@ WORKDIR /workspace
 COPY Package.swift Package.resolved ./
 COPY Sources ./Sources
 COPY Tests ./Tests
-RUN swift build --configuration release --product SaunaAPI --force-resolved-versions --jobs 4
-RUN swift test --configuration release --force-resolved-versions --jobs 4
+# Bound compiler concurrency in the local builder VM.
+RUN swift build --configuration release --product SaunaAPI --force-resolved-versions --jobs 2
+RUN swift test --configuration release --force-resolved-versions --jobs 2
 
 # The toolchain base intentionally keeps the matching Swift runtime for local use.
 FROM docker.io/library/swift:6.4.2-noble@sha256:bca121f6eb59fd80340d1296887b2698ed8f3eb9eca7d80c181f8af769dc7ee0 AS local

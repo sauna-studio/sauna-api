@@ -20,10 +20,10 @@ class PublicContractTests(unittest.TestCase):
         self.assertEqual(validate_contract(self.document), 4)
 
     def test_public_endpoints_require_no_authentication(self):
-        self.assertEqual(set(self.document["paths"]), {"/health", "/version"})
+        self.assertTrue({"/health", "/version"}.issubset(self.document["paths"]))
         self.assertEqual(self.document["security"], [])
-        for path in self.document["paths"].values():
-            self.assertEqual(path["get"]["security"], [])
+        for name in ("/health", "/version"):
+            self.assertEqual(self.document["paths"][name]["get"]["security"], [])
 
     def test_external_references_are_rejected_before_validation(self):
         document = deepcopy(self.document)
