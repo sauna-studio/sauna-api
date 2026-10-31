@@ -21,3 +21,10 @@
 ## ドキュメント・既知の制限
 
 <!-- ADR / Wiki / AGENTS.md更新、未解決Issue、移行・復旧上の注意 -->
+
+## GitHub Codex review rounds
+
+- 自動レビューの指摘への返信・修正commit:
+- 再依頼した `@codex review` コメントURL:
+- 最新commitのレビュー結果（未着は完了扱いにしない）:
+- 未対応指摘なし・最新レビュー指摘なし・必須CI成功を確認してからマージ:
