@@ -12,8 +12,64 @@ import Testing
 private enum SmokeError: Error, Equatable {
     case missingExecutable
     case readinessTimedOut
+    case childReadinessFailed(probe: ProbeMetadata, listener: Bool?, threadCount: Int?, expectedExecutable: Bool?)
     case childExitedBeforeReadiness(status: Int32)
     case shutdownTimedOut
+}
+
+private enum ProbeMetadata: Equatable {
+    case notAttempted
+    case httpStatus(Int)
+    case cannotConnectToHost
+    case timedOut
+    case connectionLost
+    case otherTransport
+    case invalidResponse
+}
+
+private func safeProbeMetadata(_ error: Error) -> ProbeMetadata {
+    guard let error = error as? URLError else { return .otherTransport }
+    switch error.code {
+    case .cannotConnectToHost: return .cannotConnectToHost
+    case .timedOut: return .timedOut
+    case .networkConnectionLost: return .connectionLost
+    default: return .otherTransport
+    }
+}
+
+private func listenerMetadata(port: Int) -> Bool? {
+    #if os(Linux)
+    guard let table = try? String(contentsOfFile: "/proc/net/tcp", encoding: .utf8) else { return nil }
+    let target = String(port, radix: 16).uppercased()
+    return table.split(separator: "\n").dropFirst().contains { line in
+        let fields = line.split(whereSeparator: { $0 == " " || $0 == "\t" })
+        return fields.count > 3 && String(fields[1].split(separator: ":").last ?? "") == target && fields[3] == "0A"
+    }
+    #else
+    return nil
+    #endif
+}
+
+private func threadMetadata(process: Process) -> Int? {
+    #if os(Linux)
+    guard let status = try? String(contentsOfFile: "/proc/\(process.processIdentifier)/status", encoding: .utf8),
+          let line = status.split(separator: "\n").first(where: { $0.hasPrefix("Threads:") }),
+          let value = line.split(whereSeparator: { $0 == " " || $0 == "\t" }).last
+    else { return nil }
+    return Int(value)
+    #else
+    return nil
+    #endif
+}
+
+private func executableMetadata(process: Process) -> Bool? {
+    #if os(Linux)
+    guard let actual = try? FileManager.default.destinationOfSymbolicLink(atPath: "/proc/\(process.processIdentifier)/exe"),
+          let expected = process.executableURL else { return nil }
+    return URL(fileURLWithPath: actual).resolvingSymlinksInPath() == expected.resolvingSymlinksInPath()
+    #else
+    return nil
+    #endif
 }
 
 private enum SmokeChildState {
@@ -91,23 +147,38 @@ struct ProcessSmokeTests {
         let session = URLSession(configuration: sessionConfiguration)
         defer { session.invalidateAndCancel() }
         let base = "http://127.0.0.1:\(port)"
-        try await waitForReadiness(
-            childState: {
-                if process.isRunning { return .running }
-                process.waitUntilExit()
-                return .exited(status: process.terminationStatus)
-            },
-            probe: {
-                guard let url = URL(string: base + "/health") else { return false }
-                do {
-                    let (_, response) = try await session.data(from: url)
-                    return (response as? HTTPURLResponse)?.statusCode == 200
-                } catch {
-                    try Task.checkCancellation()
-                    return false
+        var lastProbe = ProbeMetadata.notAttempted
+        do {
+            try await waitForReadiness(
+                childState: {
+                    if process.isRunning { return .running }
+                    process.waitUntilExit()
+                    return .exited(status: process.terminationStatus)
+                },
+                probe: {
+                    guard let url = URL(string: base + "/health") else { return false }
+                    do {
+                        let (_, response) = try await session.data(from: url)
+                        guard let status = (response as? HTTPURLResponse)?.statusCode, (100...599).contains(status) else {
+                            lastProbe = .invalidResponse
+                            return false
+                        }
+                        lastProbe = .httpStatus(status)
+                        return status == 200
+                    } catch {
+                        try Task.checkCancellation()
+                        lastProbe = safeProbeMetadata(error)
+                        return false
+                    }
                 }
-            }
-        )
+            )
+        } catch SmokeError.readinessTimedOut {
+            // Framework error descriptions and child output can contain request/environment values.
+            throw SmokeError.childReadinessFailed(
+                probe: lastProbe, listener: listenerMetadata(port: port), threadCount: threadMetadata(process: process),
+                expectedExecutable: executableMetadata(process: process)
+            )
+        }
         let url = try #require(URL(string: base + "/version"))
         let (body, response) = try await session.data(from: url)
         #expect((response as? HTTPURLResponse)?.statusCode == 200)
@@ -142,6 +213,21 @@ struct ProcessSmokeTests {
         #expect(process.terminationStatus != 0)
         let message = output.fileHandleForReading.readDataToEndOfFile() + error.fileHandleForReading.readDataToEndOfFile()
         #expect(!String(decoding: message, as: UTF8.self).contains(marker))
+    }
+
+    @Test func readinessDiagnosticsDiscardUntrustedErrorDetails() {
+        let marker = "synthetic-private-transport-marker"
+        let cases: [(URLError.Code, ProbeMetadata)] = [
+            (.cannotConnectToHost, .cannotConnectToHost), (.timedOut, .timedOut),
+            (.networkConnectionLost, .connectionLost), (.badURL, .otherTransport),
+        ]
+        for (code, expected) in cases {
+            let error = URLError(code, userInfo: [NSLocalizedDescriptionKey: marker, NSURLErrorFailingURLErrorKey: URL(string: "https://example.invalid/synthetic-private-transport-marker")!])
+            let safe = safeProbeMetadata(error)
+            #expect(safe == expected)
+            #expect(!String(describing: safe).contains(marker))
+        }
+        #expect(safeProbeMetadata(NSError(domain: marker, code: 123, userInfo: [NSLocalizedDescriptionKey: marker])) == .otherTransport)
     }
 
     @Test func readinessCanArriveAfterColdStartupDelay() async throws {
