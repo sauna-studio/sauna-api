@@ -1,4 +1,6 @@
 import Foundation
+import Hummingbird
+import HummingbirdTesting
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
@@ -9,10 +11,103 @@ import Glibc
 #endif
 import Testing
 
-private enum SmokeError: Error {
+private enum SmokeError: Error, Equatable {
     case missingExecutable
-    case serverDidNotStart
+    case delayedProbeFailed(ProbeMetadata)
+    case readinessTimedOut
+    case childReadinessFailed(probe: ProbeMetadata, listener: Bool?, threadCount: Int?, expectedExecutable: Bool?)
+    case childExitedBeforeReadiness(status: Int32)
     case shutdownTimedOut
+}
+
+private enum ProbeMetadata: Equatable {
+    case notAttempted
+    case httpStatus(Int)
+    case cannotConnectToHost
+    case timedOut
+    case connectionLost
+    case otherTransport
+    case invalidResponse
+}
+
+private func safeProbeMetadata(_ error: Error) -> ProbeMetadata {
+    guard let error = error as? URLError else { return .otherTransport }
+    switch error.code {
+    case .cannotConnectToHost: return .cannotConnectToHost
+    case .timedOut: return .timedOut
+    case .networkConnectionLost: return .connectionLost
+    default: return .otherTransport
+    }
+}
+
+private func listenerMetadata(port: Int) -> Bool? {
+    #if os(Linux)
+    guard let table = try? String(contentsOfFile: "/proc/net/tcp", encoding: .utf8) else { return nil }
+    let target = String(port, radix: 16).uppercased()
+    return table.split(separator: "\n").dropFirst().contains { line in
+        let fields = line.split(whereSeparator: { $0 == " " || $0 == "\t" })
+        return fields.count > 3 && String(fields[1].split(separator: ":").last ?? "") == target && fields[3] == "0A"
+    }
+    #else
+    return nil
+    #endif
+}
+
+private func threadMetadata(process: Process) -> Int? {
+    #if os(Linux)
+    guard let status = try? String(contentsOfFile: "/proc/\(process.processIdentifier)/status", encoding: .utf8),
+          let line = status.split(separator: "\n").first(where: { $0.hasPrefix("Threads:") }),
+          let value = line.split(whereSeparator: { $0 == " " || $0 == "\t" }).last
+    else { return nil }
+    return Int(value)
+    #else
+    return nil
+    #endif
+}
+
+private func executableMetadata(process: Process) -> Bool? {
+    #if os(Linux)
+    guard let actual = try? FileManager.default.destinationOfSymbolicLink(atPath: "/proc/\(process.processIdentifier)/exe"),
+          let expected = process.executableURL else { return nil }
+    return URL(fileURLWithPath: actual).resolvingSymlinksInPath() == expected.resolvingSymlinksInPath()
+    #else
+    return nil
+    #endif
+}
+
+private func makeProbeSession() -> URLSession {
+    let configuration = URLSessionConfiguration.ephemeral
+    // Fractional request seconds truncate to an approximately 1ms timer in Swift 6.4.2 FoundationNetworking.
+    configuration.timeoutIntervalForRequest = 1
+    configuration.timeoutIntervalForResource = 1
+    return URLSession(configuration: configuration)
+}
+
+private enum SmokeChildState {
+    case running
+    case exited(status: Int32)
+}
+
+private func waitForReadiness(
+    timeout: Duration = .seconds(15),
+    childState: () -> SmokeChildState,
+    probe: () async throws -> Bool
+) async throws {
+    let clock = ContinuousClock()
+    let deadline = clock.now.advanced(by: timeout)
+    // Retry counts couple cold-start tolerance to probe speed instead of elapsed time.
+    while true {
+        try Task.checkCancellation()
+        if case .exited(let status) = childState() {
+            throw SmokeError.childExitedBeforeReadiness(status: status)
+        }
+        guard clock.now < deadline else { throw SmokeError.readinessTimedOut }
+        let ready = try await probe()
+        try Task.checkCancellation()
+        guard clock.now < deadline else { throw SmokeError.readinessTimedOut }
+        if ready { return }
+        try await clock.sleep(until: min(deadline, clock.now.advanced(by: .milliseconds(30))))
+    }
 }
 
 private func executableURL() throws -> URL {
@@ -45,8 +140,9 @@ struct ProcessSmokeTests {
         process.executableURL = try executableURL()
         let port = Int.random(in: 49152...65535)
         process.environment = ["PORT": String(port)]  // Exercise the executable's loopback default.
-        process.standardOutput = Pipe()
-        process.standardError = Pipe()
+        // Unread pipes can block the child; raw startup output is not safe diagnostic metadata.
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
         try process.run()
         defer {
             if process.isRunning {
@@ -56,23 +152,41 @@ struct ProcessSmokeTests {
             }
         }
 
-        let sessionConfiguration = URLSessionConfiguration.ephemeral
-        sessionConfiguration.timeoutIntervalForRequest = 0.3
-        let session = URLSession(configuration: sessionConfiguration)
+        let session = makeProbeSession()
         defer { session.invalidateAndCancel() }
         let base = "http://127.0.0.1:\(port)"
-        var started = false
-        for _ in 0..<100 {
-            guard process.isRunning else { throw SmokeError.serverDidNotStart }
-            if let url = URL(string: base + "/health"),
-               let (_, response) = try? await session.data(from: url),
-               (response as? HTTPURLResponse)?.statusCode == 200 {
-                started = true
-                break
-            }
-            try await Task.sleep(for: .milliseconds(30))
+        var lastProbe = ProbeMetadata.notAttempted
+        do {
+            try await waitForReadiness(
+                childState: {
+                    if process.isRunning { return .running }
+                    process.waitUntilExit()
+                    return .exited(status: process.terminationStatus)
+                },
+                probe: {
+                    guard let url = URL(string: base + "/health") else { return false }
+                    do {
+                        let (_, response) = try await session.data(from: url)
+                        guard let status = (response as? HTTPURLResponse)?.statusCode, (100...599).contains(status) else {
+                            lastProbe = .invalidResponse
+                            return false
+                        }
+                        lastProbe = .httpStatus(status)
+                        return status == 200
+                    } catch {
+                        try Task.checkCancellation()
+                        lastProbe = safeProbeMetadata(error)
+                        return false
+                    }
+                }
+            )
+        } catch SmokeError.readinessTimedOut {
+            // Framework error descriptions and child output can contain request/environment values.
+            throw SmokeError.childReadinessFailed(
+                probe: lastProbe, listener: listenerMetadata(port: port), threadCount: threadMetadata(process: process),
+                expectedExecutable: executableMetadata(process: process)
+            )
         }
-        guard started else { throw SmokeError.serverDidNotStart }
         let url = try #require(URL(string: base + "/version"))
         let (body, response) = try await session.data(from: url)
         #expect((response as? HTTPURLResponse)?.statusCode == 200)
@@ -108,4 +222,71 @@ struct ProcessSmokeTests {
         let message = output.fileHandleForReading.readDataToEndOfFile() + error.fileHandleForReading.readDataToEndOfFile()
         #expect(!String(decoding: message, as: UTF8.self).contains(marker))
     }
+
+    @Test func probeRetrievesAResponseAfterServerProcessingDelay() async throws {
+        let router = Router()
+        router.get("/delayed-probe") { _, _ -> String in
+            try await Task.sleep(for: .milliseconds(50))
+            return "ready"
+        }
+        let application = Application(router: router)
+        try await application.test(.live) { client in
+            let port = try #require(client.port)
+            let session = makeProbeSession()
+            defer { session.invalidateAndCancel() }
+            let url = try #require(URL(string: "http://localhost:\(port)/delayed-probe"))
+            do {
+                let (body, response) = try await session.data(from: url)
+                #expect((response as? HTTPURLResponse)?.statusCode == 200)
+                #expect(body == Data("ready".utf8))
+            } catch {
+                try Task.checkCancellation()
+                throw SmokeError.delayedProbeFailed(safeProbeMetadata(error))
+            }
+        }
+    }
+
+    @Test func readinessDiagnosticsDiscardUntrustedErrorDetails() {
+        let marker = "synthetic-private-transport-marker"
+        let cases: [(URLError.Code, ProbeMetadata)] = [
+            (.cannotConnectToHost, .cannotConnectToHost), (.timedOut, .timedOut),
+            (.networkConnectionLost, .connectionLost), (.badURL, .otherTransport),
+        ]
+        for (code, expected) in cases {
+            let error = URLError(code, userInfo: [NSLocalizedDescriptionKey: marker, NSURLErrorFailingURLErrorKey: URL(string: "https://example.invalid/synthetic-private-transport-marker")!])
+            let safe = safeProbeMetadata(error)
+            #expect(safe == expected)
+            #expect(!String(describing: safe).contains(marker))
+        }
+        #expect(safeProbeMetadata(NSError(domain: marker, code: 123, userInfo: [NSLocalizedDescriptionKey: marker])) == .otherTransport)
+    }
+
+    @Test func readinessCanArriveAfterColdStartupDelay() async throws {
+        let clock = ContinuousClock()
+        let readyAt = clock.now.advanced(by: .milliseconds(3300))
+        try await waitForReadiness(childState: { .running }, probe: { clock.now >= readyAt })
+        #expect(clock.now >= readyAt)
+    }
+
+    @Test func unavailableChildReachesBoundedReadinessFailure() async throws {
+        let clock = ContinuousClock()
+        let startedAt = clock.now
+        await #expect(throws: SmokeError.readinessTimedOut) {
+            try await waitForReadiness(timeout: .milliseconds(100), childState: { .running }, probe: { false })
+        }
+        #expect(startedAt.duration(to: clock.now) < .seconds(2))
+    }
+
+    @Test func earlyExitPreservesOnlyExitStatusMetadata() async throws {
+        await #expect(throws: SmokeError.childExitedBeforeReadiness(status: 23)) {
+            try await waitForReadiness(childState: { .exited(status: 23) }, probe: { false })
+        }
+    }
+
+    @Test func cancelledReadinessIsNotReportedAsStartupFailure() async throws {
+        await #expect(throws: CancellationError.self) {
+            try await waitForReadiness(childState: { .running }, probe: { throw CancellationError() })
+        }
+    }
+
 }
