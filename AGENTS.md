@@ -60,7 +60,7 @@ PRには関連Issue、何が変わるか、実行したチェックと結果、�
 
 `/health`はDB readinessと分離したliveness、`/version`は公開release定数だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTP serverの成功/エラー応答、PORT境界値、SIGTERM終了を実HTTP・processテストで確認する。DB poolと接続診断はローカル実装済み。HTTP業務APIとの接続、認証・施設認可は未実装であり、それらを検証済みとは扱わない。
 
-最新のユーザー指示により、今回の作業はローカルbranch/commitだけに限定する。push・PR・外部Issue書き込み・main mergeは行わない。ローカルコンテナはApple `container`を使い、Docker・Docker Composeを使用しない。既存GitHub workflowのSwift containerジョブをローカルで代替実行しない。bind既定値は`127.0.0.1`とし、コンテナ内の`0.0.0.0`は明示設定、ホストへの公開はloopbackのみとする。
+2026-11-01の最新ユーザー指示により、ローカル実装を継続し、適切な単位でpush/PRを作成する。GitHub Codexへの指摘対応・返信・再レビューで指摘なしと必須CI成功を確認後にmergeできる。以前のlocal-only制限はこの指示で更新された。ローカルコンテナはApple `container`を使い、Docker・Docker Composeを使用しない。既存GitHub workflowのSwift containerジョブをローカルで代替実行しない。bind既定値は`127.0.0.1`とし、コンテナ内の`0.0.0.0`は明示設定、ホストへの公開はloopbackのみとする。
 
 API Key・秘密鍵・DB password等が必要になった時点で作業を停止し、ユーザーへ確認する。無断で秘密値を生成したり、既存credentialを探索したり、SSH/TLSのtrust確認を回避したりしない。SwiftPMの同一`.build`を複数Agentで同時変更せず、独立検証は別`--scratch-path`か実行時間を調整する。
 
