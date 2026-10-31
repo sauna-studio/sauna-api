@@ -1,4 +1,6 @@
 import Foundation
+import Hummingbird
+import HummingbirdTesting
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
@@ -11,6 +13,7 @@ import Testing
 
 private enum SmokeError: Error, Equatable {
     case missingExecutable
+    case delayedProbeFailed(ProbeMetadata)
     case readinessTimedOut
     case childReadinessFailed(probe: ProbeMetadata, listener: Bool?, threadCount: Int?, expectedExecutable: Bool?)
     case childExitedBeforeReadiness(status: Int32)
@@ -70,6 +73,14 @@ private func executableMetadata(process: Process) -> Bool? {
     #else
     return nil
     #endif
+}
+
+private func makeProbeSession() -> URLSession {
+    let configuration = URLSessionConfiguration.ephemeral
+    // Fractional request seconds truncate to an approximately 1ms timer in Swift 6.4.2 FoundationNetworking.
+    configuration.timeoutIntervalForRequest = 1
+    configuration.timeoutIntervalForResource = 1
+    return URLSession(configuration: configuration)
 }
 
 private enum SmokeChildState {
@@ -141,10 +152,7 @@ struct ProcessSmokeTests {
             }
         }
 
-        let sessionConfiguration = URLSessionConfiguration.ephemeral
-        sessionConfiguration.timeoutIntervalForRequest = 0.3
-        sessionConfiguration.timeoutIntervalForResource = 0.3
-        let session = URLSession(configuration: sessionConfiguration)
+        let session = makeProbeSession()
         defer { session.invalidateAndCancel() }
         let base = "http://127.0.0.1:\(port)"
         var lastProbe = ProbeMetadata.notAttempted
@@ -213,6 +221,29 @@ struct ProcessSmokeTests {
         #expect(process.terminationStatus != 0)
         let message = output.fileHandleForReading.readDataToEndOfFile() + error.fileHandleForReading.readDataToEndOfFile()
         #expect(!String(decoding: message, as: UTF8.self).contains(marker))
+    }
+
+    @Test func probeRetrievesAResponseAfterServerProcessingDelay() async throws {
+        let router = Router()
+        router.get("/delayed-probe") { _, _ -> String in
+            try await Task.sleep(for: .milliseconds(50))
+            return "ready"
+        }
+        let application = Application(router: router)
+        try await application.test(.live) { client in
+            let port = try #require(client.port)
+            let session = makeProbeSession()
+            defer { session.invalidateAndCancel() }
+            let url = try #require(URL(string: "http://localhost:\(port)/delayed-probe"))
+            do {
+                let (body, response) = try await session.data(from: url)
+                #expect((response as? HTTPURLResponse)?.statusCode == 200)
+                #expect(body == Data("ready".utf8))
+            } catch {
+                try Task.checkCancellation()
+                throw SmokeError.delayedProbeFailed(safeProbeMetadata(error))
+            }
+        }
     }
 
     @Test func readinessDiagnosticsDiscardUntrustedErrorDetails() {
