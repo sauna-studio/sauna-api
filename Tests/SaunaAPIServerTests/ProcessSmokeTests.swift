@@ -9,10 +9,38 @@ import Glibc
 #endif
 import Testing
 
-private enum SmokeError: Error {
+private enum SmokeError: Error, Equatable {
     case missingExecutable
-    case serverDidNotStart
+    case readinessTimedOut
+    case childExitedBeforeReadiness(status: Int32)
     case shutdownTimedOut
+}
+
+private enum SmokeChildState {
+    case running
+    case exited(status: Int32)
+}
+
+private func waitForReadiness(
+    timeout: Duration = .seconds(15),
+    childState: () -> SmokeChildState,
+    probe: () async throws -> Bool
+) async throws {
+    let clock = ContinuousClock()
+    let deadline = clock.now.advanced(by: timeout)
+    // Retry counts couple cold-start tolerance to probe speed instead of elapsed time.
+    while true {
+        try Task.checkCancellation()
+        if case .exited(let status) = childState() {
+            throw SmokeError.childExitedBeforeReadiness(status: status)
+        }
+        guard clock.now < deadline else { throw SmokeError.readinessTimedOut }
+        let ready = try await probe()
+        try Task.checkCancellation()
+        guard clock.now < deadline else { throw SmokeError.readinessTimedOut }
+        if ready { return }
+        try await clock.sleep(until: min(deadline, clock.now.advanced(by: .milliseconds(30))))
+    }
 }
 
 private func executableURL() throws -> URL {
@@ -45,8 +73,9 @@ struct ProcessSmokeTests {
         process.executableURL = try executableURL()
         let port = Int.random(in: 49152...65535)
         process.environment = ["PORT": String(port)]  // Exercise the executable's loopback default.
-        process.standardOutput = Pipe()
-        process.standardError = Pipe()
+        // Unread pipes can block the child; raw startup output is not safe diagnostic metadata.
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
         try process.run()
         defer {
             if process.isRunning {
@@ -58,21 +87,27 @@ struct ProcessSmokeTests {
 
         let sessionConfiguration = URLSessionConfiguration.ephemeral
         sessionConfiguration.timeoutIntervalForRequest = 0.3
+        sessionConfiguration.timeoutIntervalForResource = 0.3
         let session = URLSession(configuration: sessionConfiguration)
         defer { session.invalidateAndCancel() }
         let base = "http://127.0.0.1:\(port)"
-        var started = false
-        for _ in 0..<100 {
-            guard process.isRunning else { throw SmokeError.serverDidNotStart }
-            if let url = URL(string: base + "/health"),
-               let (_, response) = try? await session.data(from: url),
-               (response as? HTTPURLResponse)?.statusCode == 200 {
-                started = true
-                break
+        try await waitForReadiness(
+            childState: {
+                if process.isRunning { return .running }
+                process.waitUntilExit()
+                return .exited(status: process.terminationStatus)
+            },
+            probe: {
+                guard let url = URL(string: base + "/health") else { return false }
+                do {
+                    let (_, response) = try await session.data(from: url)
+                    return (response as? HTTPURLResponse)?.statusCode == 200
+                } catch {
+                    try Task.checkCancellation()
+                    return false
+                }
             }
-            try await Task.sleep(for: .milliseconds(30))
-        }
-        guard started else { throw SmokeError.serverDidNotStart }
+        )
         let url = try #require(URL(string: base + "/version"))
         let (body, response) = try await session.data(from: url)
         #expect((response as? HTTPURLResponse)?.statusCode == 200)
@@ -108,4 +143,33 @@ struct ProcessSmokeTests {
         let message = output.fileHandleForReading.readDataToEndOfFile() + error.fileHandleForReading.readDataToEndOfFile()
         #expect(!String(decoding: message, as: UTF8.self).contains(marker))
     }
+
+    @Test func readinessCanArriveAfterColdStartupDelay() async throws {
+        let clock = ContinuousClock()
+        let readyAt = clock.now.advanced(by: .milliseconds(3300))
+        try await waitForReadiness(childState: { .running }, probe: { clock.now >= readyAt })
+        #expect(clock.now >= readyAt)
+    }
+
+    @Test func unavailableChildReachesBoundedReadinessFailure() async throws {
+        let clock = ContinuousClock()
+        let startedAt = clock.now
+        await #expect(throws: SmokeError.readinessTimedOut) {
+            try await waitForReadiness(timeout: .milliseconds(100), childState: { .running }, probe: { false })
+        }
+        #expect(startedAt.duration(to: clock.now) < .seconds(2))
+    }
+
+    @Test func earlyExitPreservesOnlyExitStatusMetadata() async throws {
+        await #expect(throws: SmokeError.childExitedBeforeReadiness(status: 23)) {
+            try await waitForReadiness(childState: { .exited(status: 23) }, probe: { false })
+        }
+    }
+
+    @Test func cancelledReadinessIsNotReportedAsStartupFailure() async throws {
+        await #expect(throws: CancellationError.self) {
+            try await waitForReadiness(childState: { .running }, probe: { throw CancellationError() })
+        }
+    }
+
 }
