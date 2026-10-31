@@ -22,6 +22,7 @@ public enum LocalDatabaseError: Error, Equatable, CustomStringConvertible {
 public struct LocalDatabaseConfiguration: Sendable, CustomStringConvertible, CustomDebugStringConvertible {
     let host: String
     let port: Int
+    let database: String
     private let password: String
     public var description: String { "LocalDatabaseConfiguration(<redacted>)" }
     public var debugDescription: String { description }
@@ -29,11 +30,12 @@ public struct LocalDatabaseConfiguration: Sendable, CustomStringConvertible, Cus
     public init(environment: [String: String]) throws {
         let host = environment["PGHOST"] ?? "127.0.0.1"
         let portValue = environment["PGPORT"] ?? "55432"
+        let database = environment["PGDATABASE"] ?? "sauna_local"
         guard ["127.0.0.1", "::1"].contains(host),
               !portValue.isEmpty, portValue.utf8.allSatisfy({ $0 >= 48 && $0 <= 57 }),
               let port = Int(portValue), (1...65535).contains(port),
               (environment["PGUSER"] ?? "sauna_app") == "sauna_app",
-              (environment["PGDATABASE"] ?? "sauna_local") == "sauna_local",
+              ["sauna_local", "sauna_atlas_replay"].contains(database),
               let path = environment["PGPASSWORD_FILE"], path.hasPrefix("/") else {
             throw LocalDatabaseError.invalidConfiguration
         }
@@ -54,6 +56,7 @@ public struct LocalDatabaseConfiguration: Sendable, CustomStringConvertible, Cus
             }
             self.host = host
             self.port = port
+            self.database = database
             self.password = password
         } catch {
             throw LocalDatabaseError.invalidConfiguration
@@ -61,7 +64,7 @@ public struct LocalDatabaseConfiguration: Sendable, CustomStringConvertible, Cus
     }
 
     func client(timeout: Duration) -> PostgresClient {
-        var configuration = PostgresClient.Configuration(host: host, port: port, username: "sauna_app", password: password, database: "sauna_local", tls: .disable)
+        var configuration = PostgresClient.Configuration(host: host, port: port, username: "sauna_app", password: password, database: database, tls: .disable)
         configuration.options.connectTimeout = min(timeout, .seconds(2))
         configuration.options.maximumConnections = 4
         let logger = Logger(label: "SaunaDatabase") { _ in SwiftLogNoOpLogHandler() }
@@ -106,6 +109,10 @@ public enum LocalDatabase {
             throw CancellationError()
         } catch {
             if Task.isCancelled { throw CancellationError() }
+            // Preserve only our closed, fixed-message domain errors. Do not
+            // generalize this to arbitrary caller/driver errors or descriptions.
+            if let error = error as? FacilityStoreError { throw error }
+            if let error = error as? PasskeyChallengeError { throw error }
             // Never stringify credentials, raw driver errors, queries, or parameter bindings.
             throw LocalDatabaseError.unavailable
         }

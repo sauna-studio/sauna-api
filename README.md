@@ -12,7 +12,7 @@ Sauna Studio API — Swift / Hummingbird / PostgreSQL 18
 
 ## Verification
 
-現在は [MVP-001 / B01](https://github.com/sauna-studio/sauna-api/issues/5) のOpenAPI契約に加え、[MVP-002 / B02](https://github.com/sauna-studio/sauna-api/issues/6) のHummingbirdサーバをローカル開発しています。DBの接続pool・診断はローカル実装済みです。業務schema/Atlas migrationのローカル基盤も実装済みです。認証・業務HTTP・外部APIは未実装で、HTTPサーバ起動にAPI Keyや秘密鍵は必要ありません。今回の変更はローカルbranchのみで、push・PR・GitHub Actionsは実行しません。
+現在は [MVP-001 / B01](https://github.com/sauna-studio/sauna-api/issues/5) のOpenAPI契約に加え、[MVP-002 / B02](https://github.com/sauna-studio/sauna-api/issues/6) のHummingbirdサーバをローカル開発しています。DBの接続pool・診断はローカル実装済みです。業務schema/Atlas migrationのローカル基盤も実装済みです。施設アクセス層とPasskey challenge管理を追加していますが、Passkey認証・業務HTTP・外部APIは未実装で、HTTPサーバ起動にAPI Keyや秘密鍵は必要ありません。今回の変更はローカルbranchのみで、push・PR・GitHub Actionsは実行しません。
 
 契約の正本は [openapi.yaml](Sources/SaunaAPIContract/openapi.yaml) です。`GET /health` はDB readinessではなくAPIのlivenessを表す固定値、`GET /version` は公開API版とアプリrelease版のみです。両方とも認証不要で、成功は`application/json`、利用不能は固定メッセージの`application/problem+json`を定義します。ソースrevision・hostname・環境・依存サービスの状態・例外詳細は返しません。契約のexamplesは実装の稼働状態や実releaseを示すものではありません。
 
@@ -58,3 +58,5 @@ curl --fail http://127.0.0.1:8080/version
 ## Apple container / PostgreSQL のローカル環境
 
 [ローカル環境の手順](docs/LOCAL_DEVELOPMENT.md)と[検証記録](docs/LOCAL_VALIDATION.md)を参照してください。Docker Engine/Desktop/CLI/Composeは使用しません。APIは127.0.0.1:8080、DBは127.0.0.1:55432だけに公開します。DBの承認済みローカル専用パスワードはGit除外の.local/secrets内、0700/0600で保持し、値を表示しません。
+
+施設アクセスとchallengeの保証範囲・検証手順は[ローカル認証基盤](docs/LOCAL_IDENTITY.md)を参照してください。

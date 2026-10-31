@@ -91,3 +91,25 @@ CREATE TABLE public.reservation_items (
 );
 CREATE INDEX reservation_items_reservation_idx ON public.reservation_items (facility_id, reservation_id);
 CREATE INDEX reservation_items_product_idx ON public.reservation_items (facility_id, product_id);
+
+-- Public WebAuthn challenge state, not a credential or authenticated session.
+-- The browser's independent flow secret is stored only as a SHA-256 digest.
+CREATE TABLE public.webauthn_challenges (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    challenge bytea NOT NULL,
+    binding_hash bytea NOT NULL,
+    rp_id text NOT NULL,
+    origin text NOT NULL,
+    purpose text NOT NULL,
+    created_at timestamptz NOT NULL,
+    expires_at timestamptz NOT NULL,
+    consumed_at timestamptz,
+    CONSTRAINT webauthn_challenge_length CHECK (octet_length(challenge) = 32),
+    CONSTRAINT webauthn_binding_length CHECK (octet_length(binding_hash) = 32),
+    CONSTRAINT webauthn_rp_length CHECK (length(rp_id) BETWEEN 1 AND 253),
+    CONSTRAINT webauthn_origin_length CHECK (length(origin) BETWEEN 1 AND 2048),
+    CONSTRAINT webauthn_purpose_valid CHECK (purpose IN ('registration', 'authentication')),
+    CONSTRAINT webauthn_expiry_valid CHECK (isfinite(created_at) AND isfinite(expires_at) AND expires_at > created_at AND expires_at <= created_at + interval '5 minutes'),
+    CONSTRAINT webauthn_consumed_valid CHECK (consumed_at IS NULL OR (isfinite(consumed_at) AND consumed_at >= created_at AND consumed_at < expires_at))
+);
+CREATE INDEX webauthn_challenges_expiry_idx ON public.webauthn_challenges (expires_at);

@@ -9,8 +9,10 @@ let package = Package(
         .executable(name: "SaunaAPI", targets: ["SaunaAPI"]),
         .executable(name: "SaunaDBCheck", targets: ["SaunaDBCheck"]),
         .library(name: "SaunaAPIDatabase", targets: ["SaunaAPIDatabase"]),
+        .library(name: "SaunaAPIIdentity", targets: ["SaunaAPIIdentity"]),
     ],
     dependencies: [
+        .package(url: "https://github.com/apple/swift-crypto.git", exact: "5.0.3"),
         .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.14.3"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", exact: "1.13.3"),
         .package(url: "https://github.com/hummingbird-project/hummingbird", exact: "2.28.1"),
@@ -19,9 +21,10 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", exact: "1.16.2"),
     ],
     targets: [
-        .target(name: "SaunaAPIDatabase", dependencies: [.product(name: "PostgresNIO", package: "postgres-nio"), .product(name: "Logging", package: "swift-log")]),
+        .target(name: "SaunaAPIIdentity"),
+        .target(name: "SaunaAPIDatabase", dependencies: [.product(name: "Crypto", package: "swift-crypto"), "SaunaAPIIdentity", .product(name: "PostgresNIO", package: "postgres-nio"), .product(name: "Logging", package: "swift-log")]),
         .executableTarget(name: "SaunaDBCheck", dependencies: ["SaunaAPIDatabase"]),
-        .testTarget(name: "SaunaAPIDatabaseTests", dependencies: ["SaunaAPIDatabase", .product(name: "PostgresNIO", package: "postgres-nio")]),
+        .testTarget(name: "SaunaAPIDatabaseTests", dependencies: ["SaunaAPIDatabase", "SaunaAPIIdentity", .product(name: "Logging", package: "swift-log"), .product(name: "PostgresNIO", package: "postgres-nio")]),
         .target(
             name: "SaunaAPIContract",
             dependencies: [

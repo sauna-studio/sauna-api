@@ -31,7 +31,7 @@ Atlas Community1.3.0は公式versioned binaryと公開SHA256を照合し、ワ�
 
 `sauna_local`は永続開発DB。`sauna_atlas_dev`と`sauna_atlas_replay`は専用scratch DBで、作成者ownerとDB commentを照合する。Atlas dev処理はdev DBを変更し、testはowned replayのpublic schemaだけをresetする。名前が一致しても所有marker不一致なら停止する。業務テストのsynthetic fixtureはreplay内でROLLBACKする。
 
-migration ownerはadmin。appは業務6tablesへのSELECT/INSERT/UPDATE/DELETEとschema USAGEのみ。schema CREATE、TRUNCATE、table ownership、admin membership、revision table権限は与えない。これはDDL権限分離であり、全行の施設別閲覧認可ではない。
+migration ownerはadmin。appは業務6tablesおよびchallenge状態tableへのSELECT/INSERT/UPDATE/DELETEとschema USAGEのみ。schema CREATE、TRUNCATE、table ownership、admin membership、revision table権限は与えない。これはDDL権限分離であり、全行の施設別閲覧認可ではない。
 
 ## schemaの保証と未実装
 
@@ -45,7 +45,7 @@ migration ownerはadmin。appは業務6tablesへのSELECT/INSERT/UPDATE/DELETE�
 - Git trusted baseのSQL byte比較で過去改変/削除とbackdated新規fileを拒否する。atlas.sumの再生成だけではこの比較を迂回できない。
 - pglast8.7のPostgreSQL ASTでDDLをparseし、CREATE TABLE/INDEXとALTER TABLE ADD CONSTRAINTだけを許可する保守的guardを実装した。他操作は個別の方針レビューまで停止する。全てのlock/データ移行の安全性を保証するlintではない。
 - 実scratch DBへ余分columnを追加するとdrift検証が失敗し、columnが残ることを確認する。修復はtestが明示的に実施し、一致回復を確認する。
-- 制約/越境/DDL権限のSQLテストは実app接続で21件の拒否を検証する。
+- 制約/越境/DDL権限のSQLテストは実app接続で業務21件とchallenge8件の拒否を検証する。
 
 driftやmigration失敗時に自動down/resetは行わない。適用履歴とDB状態を確認し、backupと復旧方針を検討した上で新規forward fixを作成・review・再検証する。今回のhelperに本番操作やbackup自動化は含めない。
 

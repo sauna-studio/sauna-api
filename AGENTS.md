@@ -87,3 +87,9 @@ PostgresNIO poolのlifetime/操作/timeoutは同じ構造化TaskGroupでcancel�
 ## ローカルmigration
 
 db/schema.sqlを正本とし、Atlas Community1.3.0でforward-only migrationを生成する。scripts/local_migrations.pyのguard/test/apply/verifyを実行する。過去SQLはtrusted Git baseとのbyte比較で不変とし、atlas.sum更新だけで済ませない。scratch DBは固定名・owner・commentを検証し、永続DB/volumeをresetしない。appへowner/schema CREATE/TRUNCATE/admin membershipを与えない。複合FKは越境参照の整合性だけを保証し、認証済sessionによるAPI施設認可を代替しない。詳細と未完了受入はdocs/LOCAL_MIGRATIONS.mdに記録する。
+
+## 施設アクセスとchallenge
+
+VerifiedSubjectに公開initializer/Decodable/無検証factoryを追加しない。認証producer未実装の間は業務HTTPへ接続しない。全施設操作SQLでmembership/role/facilityを同時検査し、失効後の次statementで拒否する。Workspace確認なしにstaff認可完成と扱わない。
+
+PasskeyFlowBindingはhashだけDB保存、値/nonceをlog・test失敗のmacro展開へ出さない。consumeはlock取得後のDB時刻、exact RP/origin/purpose、未消費状態を同statementで検査し、署名失敗時も復活させない。consumeを認証成功の根拠にしない。ユーザー許可はローカル仮想認証器鍵/専用token生成に限定し、外部APIキーや本番用鍵へ拡大しない。replay DBを使うSwift testsとAtlas resetを同時実行しない。

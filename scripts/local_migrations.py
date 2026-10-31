@@ -18,7 +18,7 @@ ATLAS = ROOT.parent / '.tools/atlas/atlas'
 MIGRATIONS = ROOT / 'db/migrations'
 MARKER = 'sauna-local-atlas-v1'
 SCRATCH = {'sauna_atlas_dev', 'sauna_atlas_replay'}
-TABLES = ('facilities', 'users', 'facility_memberships', 'products', 'reservations', 'reservation_items')
+TABLES = ('facilities', 'users', 'facility_memberships', 'products', 'reservations', 'reservation_items', 'webauthn_challenges')
 
 
 def guard(base='HEAD', directory=MIGRATIONS):

@@ -27,6 +27,15 @@ struct DatabaseTests {
         }
     }
 
+    @Test(arguments: ["postgres", "production", "sauna_atlas_dev", "sauna_local;DROP DATABASE other"])
+    func unexpectedDatabaseIsRejected(database: String) throws {
+        try withFixture { env, _ in
+            var invalid = env
+            invalid["PGDATABASE"] = database
+            #expect(throws: LocalDatabaseError.invalidConfiguration) { try LocalDatabaseConfiguration(environment: invalid) }
+        }
+    }
+
     @Test func adminRoleIsRejected() throws {
         try withFixture { env, _ in
             var invalid = env
