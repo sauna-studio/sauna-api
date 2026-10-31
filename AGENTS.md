@@ -56,4 +56,6 @@ PRには関連Issue、何が変わるか、実行したチェックと結果、�
 
 実装後はswift build / swift test、PostgreSQL 18統合テスト、OpenAPI整合性とAtlas migrationを検証する。
 
-初期CIは共通Repository policy検査のみ。アプリのビルド・テスト・実行を検証済みとは扱わない。実装Issueでmanifest・lockfile・テストを追加し、対応する実コードCIを有効化する。
+現在はOpenAPIのhealth/version契約と生成Swiftコードのbuild/testのみを提供する。`Sources/SaunaAPIContract/openapi.yaml`を契約の正本とし、生成物をコミットしない。`swift build --force-resolved-versions` / `swift test --force-resolved-versions`を実行する。Python 3.11以上で`pip install -r scripts/requirements.txt`後、`python scripts/validate_openapi.py`と`python -m unittest discover -s scripts -p 'test_*.py' -v`を実行する。
+
+`/health`はDB readinessと分離したliveness、`/version`は公開release版だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTPサーバ・DB・認証はまだ未実装なので、生成compileの成功をHTTP動作確認済みと記録しない。実サーバ・port・graceful shutdownはMVP-002で追加する。

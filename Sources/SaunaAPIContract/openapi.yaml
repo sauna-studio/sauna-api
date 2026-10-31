@@ -1,0 +1,116 @@
+openapi: 3.1.0
+info:
+  title: Sauna Studio API
+  version: 1.0.0
+  description: >-
+    Public service status and release information. This contract does not expose
+    hostnames, source revisions, deployment environments, or dependency status.
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+  - url: /
+    description: The origin serving this API.
+security: []
+tags:
+  - name: Service
+    description: Public service metadata without customer or operational details.
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Check whether the API can answer requests
+      description: >-
+        A public liveness check, not database readiness or a diagnostic endpoint.
+        A healthy API returns only the fixed public status. No authentication is required.
+      tags: [Service]
+      security: []
+      responses:
+        '200':
+          description: The API can answer requests.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              examples:
+                healthy:
+                  value:
+                    status: ok
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /version:
+    get:
+      operationId: getVersion
+      summary: Read public API and application release versions
+      description: >-
+        Returns semantic release versions only. Source revisions, build metadata,
+        hostnames, runtime versions, and deployment environments are excluded.
+        No authentication is required.
+      tags: [Service]
+      security: []
+      responses:
+        '200':
+          description: Public release version information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+              examples:
+                release:
+                  value:
+                    apiVersion: 1.0.0
+                    version: 0.1.0
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  responses:
+    ServiceUnavailable:
+      description: The service is temporarily unavailable; no internal details are returned.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ServiceUnavailableProblem'
+          examples:
+            unavailable:
+              value:
+                type: about:blank
+                title: Service Unavailable
+                status: 503
+  schemas:
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          description: A fixed liveness status; no dependency information is included.
+    Version:
+      type: object
+      additionalProperties: false
+      required: [apiVersion, version]
+      properties:
+        apiVersion:
+          type: string
+          pattern: '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?![\s\S])'
+          description: The public API contract release; never a source revision.
+        version:
+          type: string
+          pattern: '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?![\s\S])'
+          description: The public application release, without prerelease or build metadata.
+    ServiceUnavailableProblem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status]
+      description: A restricted RFC 9457 problem with a fixed public message and no exception details.
+      properties:
+        type:
+          type: string
+          enum: ['about:blank']
+        title:
+          type: string
+          enum: [Service Unavailable]
+        status:
+          type: integer
+          enum: [503]
