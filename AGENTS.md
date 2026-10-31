@@ -97,3 +97,7 @@ PasskeyFlowBindingはhashだけDB保存、値/nonceをlog・test失敗のmacro�
 ## API参照実装
 
 ユーザー指定blindlog-api@82a13ed73fff44984e8954781d669cf8320883eaのPackage.swift/構成をAPI実装の基準にする。対応と依存/fork評価はdocs/BLINDLOG_REFERENCE.mdを更新する。自前productiontargetsは共通apiSwiftSettingsを維持し、公開型だけpublic import、欠けたmodule importを明示する。VerifiedSubjectを公開生成可能にしたり生成OpenAPIを編集してbuildを通さない。参照先のメールOTP/Cloudflare/Valkey正本をSaunaへ継承しない。依存は必要性・license・差分を確認し、採用時はrelease/exact revision+lockを固定する。
+
+## Dependabotの扱い
+
+ユーザーの2026-11-01指示により、Dependabotの失敗・通知は対応対象/作業のブロッカーとしない。sauna-api#41のupdater復旧を待たず進める。依存変更そのものは差分とlockfileをレビューし、通常のbuild/test/required checksとCodexレビュー条件を適用する。
