@@ -58,7 +58,7 @@ PRには関連Issue、何が変わるか、実行したチェックと結果、�
 
 現在はOpenAPIのhealth/version契約とHummingbird HTTPサーバをローカル開発する。`Sources/SaunaAPIContract/openapi.yaml`を契約の正本とし、生成物をコミットしない。`swift build --force-resolved-versions` / `swift test --force-resolved-versions`を実行する。Python 3.11以上で`pip install -r scripts/requirements.txt`後、`python scripts/validate_openapi.py`と`python -m unittest discover -s scripts -p 'test_*.py' -v`を実行する。
 
-`/health`はDB readinessと分離したliveness、`/version`は公開release定数だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTP serverの成功/エラー応答、PORT境界値、SIGTERM終了を実HTTP・processテストで確認する。DB poolと接続診断はローカル実装済み。HTTP業務APIとの接続、業務schema/migrations、認証・施設認可は未実装であり、それらを検証済みとは扱わない。
+`/health`はDB readinessと分離したliveness、`/version`は公開release定数だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTP serverの成功/エラー応答、PORT境界値、SIGTERM終了を実HTTP・processテストで確認する。DB poolと接続診断はローカル実装済み。HTTP業務APIとの接続、認証・施設認可は未実装であり、それらを検証済みとは扱わない。
 
 最新のユーザー指示により、今回の作業はローカルbranch/commitだけに限定する。push・PR・外部Issue書き込み・main mergeは行わない。ローカルコンテナはApple `container`を使い、Docker・Docker Composeを使用しない。既存GitHub workflowのSwift containerジョブをローカルで代替実行しない。bind既定値は`127.0.0.1`とし、コンテナ内の`0.0.0.0`は明示設定、ホストへの公開はloopbackのみとする。
 
@@ -83,3 +83,7 @@ API Key・秘密鍵・DB password等が必要になった時点で作業を停�
 PostgresNIO poolのlifetime/操作/timeoutは同じ構造化TaskGroupでcancelし、行sequenceを実消費する回帰でdeadlineと再接続を検証する。コンテナ/volume操作は所有labelを確認し、他project・既存dataを削除しない。私有directoryをbuild contextに含めない。
 
 公式libraryを優先し、forkが必要なら再現/回帰・最小差分・固定revision・上流PR方針を記録する。現在は公式Hummingbird/SwiftOpenAPI/PostgresNIOの安定releaseを使用している。Web共通stackはSvelteKit/Svelte5Runes/TypeScript/Bun/Vite/Tailwind4/shadcn-svelte/Lucide/Superforms+Zod/openapi-fetch/Vitest/Playwright/ESLint+Prettier。
+
+## ローカルmigration
+
+db/schema.sqlを正本とし、Atlas Community1.3.0でforward-only migrationを生成する。scripts/local_migrations.pyのguard/test/apply/verifyを実行する。過去SQLはtrusted Git baseとのbyte比較で不変とし、atlas.sum更新だけで済ませない。scratch DBは固定名・owner・commentを検証し、永続DB/volumeをresetしない。appへowner/schema CREATE/TRUNCATE/admin membershipを与えない。複合FKは越境参照の整合性だけを保証し、認証済sessionによるAPI施設認可を代替しない。詳細と未完了受入はdocs/LOCAL_MIGRATIONS.mdに記録する。

@@ -33,7 +33,7 @@ PGPASSWORD_FILE="$PWD/.local/secrets/postgres-app-password" swift run --skip-bui
 
 DBは127.0.0.1:55432、database sauna_local、app role sauna_app。admin/app credentialを別ファイルに分離し、directory0700/file0600、Git除外する。Postgres18のvolumeは/var/lib/postgresql、容量2G。host/localともSCRAM。再起動時はowned container/volumeを保持し、roleの権限を検証し、passwordはresetしない。停止はlocal_postgres.py stop、再開はstart→configure-role→診断の順に実行する。volume/secretの自動削除は実装しない。
 
-DB pool/診断はlocal-loopback専用。remote接続・Cloud SQL TLS・施設認可・業務schema/Atlasはまだ実装していない。/healthはlivenessでありDB障害状態を返さない。
+DB pool/診断はlocal-loopback専用。remote接続・Cloud SQL TLS・施設認可・業務認可はまだ実装していない。schema/Atlasは[ローカルmigration](LOCAL_MIGRATIONS.md)を参照する。/healthはlivenessでありDB障害状態を返さない。
 
 ## 検証
 
@@ -48,4 +48,4 @@ PGPASSWORD_FILE="$PWD/.local/secrets/postgres-app-password" swift test --force-r
 
 ## 施設境界の次の設計
 
-業務entityはfacility_idを明示し、施設内entity参照は(facility_id,id)の複合unique/FKで越境を防ぐ。user identityは施設membershipと分離する。UUIDは識別子であり認可の代替にしない。現時点は接続基盤だけであり、この設計のDB制約や権限検証はschema/認証Issueで実装する。
+業務entityはfacility_idを明示し、施設内entity参照は(facility_id,id)の複合unique/FKで越境を防ぐ。user identityは施設membershipと分離する。UUIDは識別子であり認可の代替にしない。複合PK/FKのDB制約とappのDDL権限分離はローカル実装・検証済み。認証済sessionによるAPI施設認可は後続Issueで実装する。

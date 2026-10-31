@@ -111,18 +111,20 @@ def start():
     print('Local PostgreSQL started; published only at 127.0.0.1:55432')
 
 
-def query(sql):
+def query(sql, database='sauna_local', role='admin'):
+    if database not in {'sauna_local', 'sauna_atlas_dev', 'sauna_atlas_replay'} or role not in FILES:
+        raise RuntimeError('Refusing unexpected local database or role')
     owned()
     # Password is read inside the VM into a private pgpass file, never argv/env.
     shell = '''set -eu
 umask 077
 pgpass=$(mktemp /tmp/sauna-pgpass.XXXXXX)
 trap 'rm -f "$pgpass"' EXIT
-printf '127.0.0.1:5432:sauna_local:sauna_admin:%s\\n' "$(cat /run/sauna-secrets/postgres-admin-password)" > "$pgpass"
+printf '127.0.0.1:5432:DATABASE:USERNAME:%s\\n' "$(cat /run/sauna-secrets/@SECRET_FILE@)" > "$pgpass"
 export PGPASSFILE="$pgpass"
-exec_psql() { /usr/lib/postgresql/18/bin/psql --no-password --host=127.0.0.1 --port=5432 --username=sauna_admin --dbname=sauna_local --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1; }
+exec_psql() { /usr/lib/postgresql/18/bin/psql --no-password --host=127.0.0.1 --port=5432 --username=USERNAME --dbname=DATABASE --no-psqlrc --tuples-only --no-align --set=ON_ERROR_STOP=1; }
 exec_psql
-'''
+'''.replace('DATABASE', database).replace('USERNAME', 'sauna_' + role).replace('@SECRET_FILE@', FILES[role])
     return command(['container', 'exec', '--user', '0', '--interactive', NAME, '/bin/sh', '-c', shell], sql)
 
 
