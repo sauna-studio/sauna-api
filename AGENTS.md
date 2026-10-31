@@ -57,3 +57,15 @@ PRには関連Issue、何が変わるか、実行したチェックと結果、�
 実装後はswift build / swift test、PostgreSQL 18統合テスト、OpenAPI整合性とAtlas migrationを検証する。
 
 初期CIは共通Repository policy検査のみ。アプリのビルド・テスト・実行を検証済みとは扱わない。実装Issueでmanifest・lockfile・テストを追加し、対応する実コードCIを有効化する。
+
+## GitHub Codexレビューとマージ条件
+
+1. PRの自動Codexレビューを確認する。指摘ごとに根拠を確認し、必要なコード修正・回帰テストを行う。
+2. 各レビューthreadに、修正内容・commit・検証結果を返信する。対応不要と判断した場合も理由を説明し、未解決事項を隠さない。
+3. 対応後にPRへ正確に `@codex review` とコメントし、新しいレビューを依頼する。最新commitに対するレビュー結果を待つ。
+4. 新しい指摘があれば同じ処理を繰り返す。GitHubのCodexが指摘なしと示し、未対応の指摘がなく、必須CIが成功した後だけマージする。
+5. レビュー未着・連携未設定・利用上限・実行失敗は指摘なしと見なさない。原因と依頼URLを記録し、PRを開いたままにする。独立ローカルReview Agentの合格でこの条件を代替しない。
+
+このGitHub上のレビューは、実装中の独立Review Agent並行起動と実ビルド・テストに追加する確認である。レビュー依頼だけで成功扱いにしない。自動返信・同じ依頼の連投を避け、レビューroundと対象commitをPRへ記録する。
+
+共通追加規則の適用元: `sauna-studio/.github@e24383d0f9fe6784293e1b781edffd08750f0a20` (`policies/github-codex-review.md`)。
