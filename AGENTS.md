@@ -66,9 +66,9 @@ PRには関連Issue、何が変わるか、実行したチェックと結果、�
 
 実装後はswift build / swift test、PostgreSQL 18統合テスト、OpenAPI整合性とAtlas migrationを検証する。
 
-現在はOpenAPIのhealth/version契約とHummingbird HTTPサーバをローカル開発する。`Sources/SaunaAPIContract/openapi.yaml`を契約の正本とし、生成物をコミットしない。`swift build --force-resolved-versions` / `swift test --force-resolved-versions`を実行する。Python 3.11以上で`pip install -r scripts/requirements.txt`後、`python scripts/validate_openapi.py`と`python -m unittest discover -s scripts -p 'test_*.py' -v`を実行する。
+現在はhealth/versionと、`SAUNA_LOCAL_AUTH=1`で明示的に有効化するローカルPasskey/session HTTPをHummingbirdで実装している。認証有効時のbindはloopbackに限定する。`Sources/SaunaAPIContract/openapi.yaml`を契約の正本とし、生成物をコミットしない。`swift build --force-resolved-versions` / `swift test --force-resolved-versions`を実行する。Python 3.11以上で`pip install -r scripts/requirements.txt`後、`python scripts/validate_openapi.py`と`python -m unittest discover -s scripts -p 'test_*.py' -v`を実行する。
 
-`/health`はDB readinessと分離したliveness、`/version`は公開release定数だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTP serverの成功/エラー応答、PORT境界値、SIGTERM終了を実HTTP・processテストで確認する。DB poolと接続診断はローカル実装済み。HTTP業務APIとの接続、認証・施設認可は未実装であり、それらを検証済みとは扱わない。
+`/health`はDB readinessと分離したliveness、`/version`は公開release定数だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTP serverの成功/エラー応答、PORT境界値、SIGTERM終了を実HTTP・processテストで確認する。DB pool・接続診断と、ローカルPasskey登録・署名/UV検証・session HTTPは実装済み。施設の業務HTTP・Workspace所属認可・本番設定は未実装であり、ログイン成功を社員・施設権限の証明と扱わない。実装範囲と検証結果はdocs/LOCAL_IDENTITY.mdとdocs/LOCAL_VALIDATION.mdを参照する。
 
 2026-11-01の最新ユーザー指示により、ローカル実装を継続し、適切な単位でpush/PRを作成する。GitHub Codexへの指摘対応・返信・再レビューで指摘なしと必須CI成功を確認後にmergeできる。以前のlocal-only制限はこの指示で更新された。ローカルコンテナはApple `container`を使い、Docker・Docker Composeを使用しない。既存GitHub workflowのSwift containerジョブをローカルで代替実行しない。bind既定値は`127.0.0.1`とし、コンテナ内の`0.0.0.0`は明示設定、ホストへの公開はloopbackのみとする。
 
@@ -90,9 +90,9 @@ API Key・秘密鍵・DB password等が必要になった時点で作業を停�
 
 この作業ではユーザーがローカルDB専用passwordの生成・私有ファイル保存を明示許可した。既存の.local/secretsを再利用し、上書き/reset/値表示/別APIへの転用をしない。別用途のAPIキー・秘密鍵等が必要なら停止して確認する。admin/appは別credential、appは非superuser・CREATEDB/CREATEROLE/REPLICATION/BYPASSRLSなし。TLS.disableはlocal専用loopback接続だけ。秘密値はファイルからアプリ内で読み、argv・設定dump・raw driver errorへ含めない。
 
-PostgresNIO poolのlifetime/操作/timeoutは同じ構造化TaskGroupでcancelし、行sequenceを実消費する回帰でdeadlineと再接続を検証する。コンテナ/volume操作は所有labelを確認し、他project・既存dataを削除しない。私有directoryをbuild contextに含めない。
+診断用LocalDatabase.withClientが所有するpoolのlifetime/操作/timeoutは同じ構造化TaskGroupで管理する。HTTP認証のrequest timeoutでは共有poolを停止せず、authenticationConnectionが所有するleaseだけをcloseし、close完了を待って返す。late cancelと返却はMutexで直列化し、Taskのcancelを伴わないCancellationErrorやrollback失敗でも接続を破棄する。client close完了をserverのrollback応答と同一視しない。行sequenceを実消費する回帰でdeadlineと再接続を検証する。コンテナ/volume操作は所有labelを確認し、他project・既存dataを削除しない。私有directoryをbuild contextに含めない。
 
-公式libraryを優先し、forkが必要なら再現/回帰・最小差分・固定revision・上流PR方針を記録する。現在は公式Hummingbird/SwiftOpenAPI/PostgresNIOの安定releaseを使用している。Web共通stackはSvelteKit/Svelte5Runes/TypeScript/Bun/Vite/Tailwind4/shadcn-svelte/Lucide/Superforms+Zod/openapi-fetch/Vitest/Playwright/ESLint+Prettier。
+公式libraryを優先し、forkが必要なら再現/回帰・最小差分・固定revision・上流PR方針を記録する。Hummingbird/SwiftOpenAPIは公式stable、WebAuthnはPR128系のzunda-pixel/swift-webauthn、PostgresNIOはclosed-channel query promise修正を含むsauna-studio/postgres-nioの固定revisionを使用し、CBORはbrokenhandsio/swift-cbor 0.2.0を使う。実際の依存revisionはPackage.swift/Package.resolved、採用理由・出典・解消条件はdocs/DEPENDENCIES.mdを正本とする。Web共通stackはSvelteKit/Svelte5Runes/TypeScript/Bun/Vite/Tailwind4/shadcn-svelte/Lucide/Superforms+Zod/openapi-fetch/Vitest/Playwright/ESLint+Prettier。
 
 ## ローカルmigration
 
@@ -100,7 +100,7 @@ db/schema.sqlを正本とし、Atlas Community1.3.0でforward-only migrationを�
 
 ## 施設アクセスとchallenge
 
-VerifiedSubjectに公開initializer/Decodable/無検証factoryを追加しない。認証producer未実装の間は業務HTTPへ接続しない。全施設操作SQLでmembership/role/facilityを同時検査し、失効後の次statementで拒否する。Workspace確認なしにstaff認可完成と扱わない。
+VerifiedSubjectに公開initializer/Decodable/無検証factoryを追加しない。生成はSessionStore内の署名・UV検証済みログインtransactionによる発行、または有効sessionのDB照合を経た経路に限定する。施設の業務HTTPへの接続は未実装であり、追加時はSecurity Reviewと実DBの施設境界検証を伴う。全施設操作SQLでmembership/role/facilityを同時検査し、失効後の次statementで拒否する。Workspace確認なしにstaff認可完成と扱わない。
 
 PasskeyFlowBindingはhashだけDB保存、値/nonceをlog・test失敗のmacro展開へ出さない。consumeはlock取得後のDB時刻、exact RP/origin/purpose、未消費状態を同statementで検査し、署名失敗時も復活させない。consumeを認証成功の根拠にしない。ユーザー許可はローカル仮想認証器鍵/専用token生成に限定し、外部APIキーや本番用鍵へ拡大しない。replay DBを使うSwift testsとAtlas resetを同時実行しない。
 
