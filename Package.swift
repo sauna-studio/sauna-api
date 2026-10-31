@@ -7,14 +7,21 @@ let package = Package(
     products: [
         .library(name: "SaunaAPIContract", targets: ["SaunaAPIContract"]),
         .executable(name: "SaunaAPI", targets: ["SaunaAPI"]),
+        .executable(name: "SaunaDBCheck", targets: ["SaunaDBCheck"]),
+        .library(name: "SaunaAPIDatabase", targets: ["SaunaAPIDatabase"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.14.3"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", exact: "1.13.3"),
         .package(url: "https://github.com/hummingbird-project/hummingbird", exact: "2.28.1"),
         .package(url: "https://github.com/hummingbird-project/swift-openapi-hummingbird", exact: "2.1.0"),
+        .package(url: "https://github.com/vapor/postgres-nio.git", exact: "1.33.2"),
+        .package(url: "https://github.com/apple/swift-log.git", exact: "1.16.2"),
     ],
     targets: [
+        .target(name: "SaunaAPIDatabase", dependencies: [.product(name: "PostgresNIO", package: "postgres-nio"), .product(name: "Logging", package: "swift-log")]),
+        .executableTarget(name: "SaunaDBCheck", dependencies: ["SaunaAPIDatabase"]),
+        .testTarget(name: "SaunaAPIDatabaseTests", dependencies: ["SaunaAPIDatabase", .product(name: "PostgresNIO", package: "postgres-nio")]),
         .target(
             name: "SaunaAPIContract",
             dependencies: [

@@ -58,7 +58,7 @@ PRには関連Issue、何が変わるか、実行したチェックと結果、�
 
 現在はOpenAPIのhealth/version契約とHummingbird HTTPサーバをローカル開発する。`Sources/SaunaAPIContract/openapi.yaml`を契約の正本とし、生成物をコミットしない。`swift build --force-resolved-versions` / `swift test --force-resolved-versions`を実行する。Python 3.11以上で`pip install -r scripts/requirements.txt`後、`python scripts/validate_openapi.py`と`python -m unittest discover -s scripts -p 'test_*.py' -v`を実行する。
 
-`/health`はDB readinessと分離したliveness、`/version`は公開release定数だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTP serverの成功/エラー応答、PORT境界値、SIGTERM終了を実HTTP・processテストで確認する。DB・認証は未実装であり、それらを検証済みとは扱わない。
+`/health`はDB readinessと分離したliveness、`/version`は公開release定数だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTP serverの成功/エラー応答、PORT境界値、SIGTERM終了を実HTTP・processテストで確認する。DB poolと接続診断はローカル実装済み。HTTP業務APIとの接続、業務schema/migrations、認証・施設認可は未実装であり、それらを検証済みとは扱わない。
 
 最新のユーザー指示により、今回の作業はローカルbranch/commitだけに限定する。push・PR・外部Issue書き込み・main mergeは行わない。ローカルコンテナはApple `container`を使い、Docker・Docker Composeを使用しない。既存GitHub workflowのSwift containerジョブをローカルで代替実行しない。bind既定値は`127.0.0.1`とし、コンテナ内の`0.0.0.0`は明示設定、ホストへの公開はloopbackのみとする。
 
@@ -75,3 +75,11 @@ API Key・秘密鍵・DB password等が必要になった時点で作業を停�
 このGitHub上のレビューは、実装中の独立Review Agent並行起動と実ビルド・テストに追加する確認である。レビュー依頼だけで成功扱いにしない。自動返信・同じ依頼の連投を避け、レビューroundと対象commitをPRへ記録する。
 
 共通追加規則の適用元: `sauna-studio/.github@e24383d0f9fe6784293e1b781edffd08750f0a20` (`policies/github-codex-review.md`)。
+
+## ローカルDBと外部ライブラリ
+
+この作業ではユーザーがローカルDB専用passwordの生成・私有ファイル保存を明示許可した。既存の.local/secretsを再利用し、上書き/reset/値表示/別APIへの転用をしない。別用途のAPIキー・秘密鍵等が必要なら停止して確認する。admin/appは別credential、appは非superuser・CREATEDB/CREATEROLE/REPLICATION/BYPASSRLSなし。TLS.disableはlocal専用loopback接続だけ。秘密値はファイルからアプリ内で読み、argv・設定dump・raw driver errorへ含めない。
+
+PostgresNIO poolのlifetime/操作/timeoutは同じ構造化TaskGroupでcancelし、行sequenceを実消費する回帰でdeadlineと再接続を検証する。コンテナ/volume操作は所有labelを確認し、他project・既存dataを削除しない。私有directoryをbuild contextに含めない。
+
+公式libraryを優先し、forkが必要なら再現/回帰・最小差分・固定revision・上流PR方針を記録する。現在は公式Hummingbird/SwiftOpenAPI/PostgresNIOの安定releaseを使用している。Web共通stackはSvelteKit/Svelte5Runes/TypeScript/Bun/Vite/Tailwind4/shadcn-svelte/Lucide/Superforms+Zod/openapi-fetch/Vitest/Playwright/ESLint+Prettier。

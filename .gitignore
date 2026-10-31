@@ -23,3 +23,6 @@ coverage/
 __pycache__/
 *.pyc
 .venv/
+
+# Local development credentials and runtime state
+.local/
