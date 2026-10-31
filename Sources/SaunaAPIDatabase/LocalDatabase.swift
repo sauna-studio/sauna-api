@@ -1,6 +1,6 @@
 import Foundation
 import Logging
-import PostgresNIO
+public import PostgresNIO
 #if canImport(Darwin)
 import Darwin
 #else

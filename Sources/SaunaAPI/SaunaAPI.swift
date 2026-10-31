@@ -16,7 +16,8 @@ struct SaunaAPICommand {
                 bindHost: ProcessInfo.processInfo.environment["BIND_HOST"]
             )
             let app = try makeApplication(configuration: configuration)
-            try await app.runService(gracefulShutdownSignals: [.sigterm, .sigint])
+            // The pinned Hummingbird default handles both SIGTERM and SIGINT.
+            try await app.runService()
         } catch let error as ServerConfiguration.ConfigurationError {
             FileHandle.standardError.write(Data((error.description + "\n").utf8))
             exit(EXIT_FAILURE)

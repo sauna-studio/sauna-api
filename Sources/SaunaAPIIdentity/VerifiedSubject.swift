@@ -1,4 +1,4 @@
-import Foundation
+public import Foundation
 
 /// An identity established by the authentication module, never a client-supplied
 /// user ID. There is intentionally no public initializer or decoding conformance.

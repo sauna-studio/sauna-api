@@ -1,4 +1,4 @@
-import SaunaAPIContract
+public import SaunaAPIContract
 
 public struct ServiceAPI: APIProtocol {
     // Public release identifiers only. Never derive these from environment or git metadata.

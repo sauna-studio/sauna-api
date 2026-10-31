@@ -1,7 +1,7 @@
-import Foundation
+public import Foundation
 import Logging
-import PostgresNIO
-import SaunaAPIIdentity
+public import PostgresNIO
+public import SaunaAPIIdentity
 
 public enum FacilityStoreError: Error, Equatable, CustomStringConvertible {
     /// Deliberately does not distinguish missing resources from denied access.

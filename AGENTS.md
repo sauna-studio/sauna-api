@@ -93,3 +93,7 @@ db/schema.sqlを正本とし、Atlas Community1.3.0でforward-only migrationを�
 VerifiedSubjectに公開initializer/Decodable/無検証factoryを追加しない。認証producer未実装の間は業務HTTPへ接続しない。全施設操作SQLでmembership/role/facilityを同時検査し、失効後の次statementで拒否する。Workspace確認なしにstaff認可完成と扱わない。
 
 PasskeyFlowBindingはhashだけDB保存、値/nonceをlog・test失敗のmacro展開へ出さない。consumeはlock取得後のDB時刻、exact RP/origin/purpose、未消費状態を同statementで検査し、署名失敗時も復活させない。consumeを認証成功の根拠にしない。ユーザー許可はローカル仮想認証器鍵/専用token生成に限定し、外部APIキーや本番用鍵へ拡大しない。replay DBを使うSwift testsとAtlas resetを同時実行しない。
+
+## API参照実装
+
+ユーザー指定blindlog-api@82a13ed73fff44984e8954781d669cf8320883eaのPackage.swift/構成をAPI実装の基準にする。対応と依存/fork評価はdocs/BLINDLOG_REFERENCE.mdを更新する。自前productiontargetsは共通apiSwiftSettingsを維持し、公開型だけpublic import、欠けたmodule importを明示する。VerifiedSubjectを公開生成可能にしたり生成OpenAPIを編集してbuildを通さない。参照先のメールOTP/Cloudflare/Valkey正本をSaunaへ継承しない。依存は必要性・license・差分を確認し、採用時はrelease/exact revision+lockを固定する。

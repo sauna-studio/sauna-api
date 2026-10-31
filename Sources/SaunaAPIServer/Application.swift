@@ -1,4 +1,5 @@
-import Hummingbird
+public import Hummingbird
+import SaunaAPIContract
 import OpenAPIHummingbird
 import OpenAPIRuntime
 

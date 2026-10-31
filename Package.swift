@@ -1,6 +1,20 @@
 // swift-tools-version: 6.4
 import PackageDescription
 
+// Compiler policy follows the pinned blindlog-api reference; apply to our code,
+// not third-party targets. Keep explicit public/package imports at API boundaries.
+let apiSwiftSettings: [SwiftSetting] = [
+    .enableUpcomingFeature("ExistentialAny"),
+    .enableUpcomingFeature("InternalImportsByDefault"),
+    .enableUpcomingFeature("MemberImportVisibility"),
+    .enableUpcomingFeature("InferIsolatedConformances"),
+    .enableUpcomingFeature("ImmutableWeakCaptures"),
+    .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+    .defaultIsolation(nil),
+    .strictMemorySafety(),
+    .treatAllWarnings(as: .error),
+]
+
 let package = Package(
     name: "SaunaAPI",
     platforms: [.macOS(.v27)],
@@ -21,15 +35,16 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", exact: "1.16.2"),
     ],
     targets: [
-        .target(name: "SaunaAPIIdentity"),
-        .target(name: "SaunaAPIDatabase", dependencies: [.product(name: "Crypto", package: "swift-crypto"), "SaunaAPIIdentity", .product(name: "PostgresNIO", package: "postgres-nio"), .product(name: "Logging", package: "swift-log")]),
-        .executableTarget(name: "SaunaDBCheck", dependencies: ["SaunaAPIDatabase"]),
+        .target(name: "SaunaAPIIdentity", swiftSettings: apiSwiftSettings),
+        .target(name: "SaunaAPIDatabase", dependencies: [.product(name: "Crypto", package: "swift-crypto"), "SaunaAPIIdentity", .product(name: "PostgresNIO", package: "postgres-nio"), .product(name: "Logging", package: "swift-log")], swiftSettings: apiSwiftSettings),
+        .executableTarget(name: "SaunaDBCheck", dependencies: ["SaunaAPIDatabase"], swiftSettings: apiSwiftSettings),
         .testTarget(name: "SaunaAPIDatabaseTests", dependencies: ["SaunaAPIDatabase", "SaunaAPIIdentity", .product(name: "Logging", package: "swift-log"), .product(name: "PostgresNIO", package: "postgres-nio")]),
         .target(
             name: "SaunaAPIContract",
             dependencies: [
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime")
             ],
+            swiftSettings: apiSwiftSettings,
             plugins: [
                 .plugin(name: "OpenAPIGenerator", package: "swift-openapi-generator")
             ]
@@ -42,11 +57,13 @@ let package = Package(
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "OpenAPIHummingbird", package: "swift-openapi-hummingbird"),
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
-            ]
+            ],
+            swiftSettings: apiSwiftSettings
         ),
         .executableTarget(
             name: "SaunaAPI",
-            dependencies: ["SaunaAPIServer", .product(name: "Hummingbird", package: "hummingbird")]
+            dependencies: ["SaunaAPIServer", .product(name: "Hummingbird", package: "hummingbird")],
+            swiftSettings: apiSwiftSettings
         ),
         .testTarget(
             name: "SaunaAPIServerTests",

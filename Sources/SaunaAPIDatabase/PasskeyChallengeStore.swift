@@ -1,7 +1,7 @@
 import Crypto
-import Foundation
+public import Foundation
 import Logging
-import PostgresNIO
+public import PostgresNIO
 
 public enum PasskeyChallengeError: Error, Equatable, CustomStringConvertible {
     case invalidInput

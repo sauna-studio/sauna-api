@@ -42,3 +42,7 @@ Atlas CE1.3.0で初回migration生成、空replayへの適用と二度目差分�
 swift-webauthnは隔離した公式beta1で上流38tests、修正済main固定commitで63tests成功。Sauna依存への追加は行わず、評価/未検証範囲はWEBAUTHN_EVALUATION.mdに記録した。
 
 最終imageへのAPI再起動後にhealth/version、利用者/管理者Webからのapi:smoke、両WebのHTTP200を確認。Bunの最初の呼出は子process用PATH未設定で127終了し、workspace-local BunをPATHへ設定して両方を再実行し成功した（ソース変更なし）。
+
+## blindlog-api固定参照の反映
+
+user指定82a13ed73fff44984e8954781d669cf8320883eaのPackage/Sources/lockを確認し、共通の厳格swiftSettingsを自前production6targetsへ適用した。必要なpublic/direct importsを明示し、生成物は編集せず、認証subjectのconstructorはinternalのまま。host swift build/実DB込み38testsは警告なしで成功。独立Reviewも38testsと境界scriptを実行し成功、Security Reviewは厳格設定下の外部生成拒否を別moduleで確認した。Linux結果は完了後追記。

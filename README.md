@@ -60,3 +60,5 @@ curl --fail http://127.0.0.1:8080/version
 [ローカル環境の手順](docs/LOCAL_DEVELOPMENT.md)と[検証記録](docs/LOCAL_VALIDATION.md)を参照してください。Docker Engine/Desktop/CLI/Composeは使用しません。APIは127.0.0.1:8080、DBは127.0.0.1:55432だけに公開します。DBの承認済みローカル専用パスワードはGit除外の.local/secrets内、0700/0600で保持し、値を表示しません。
 
 施設アクセスとchallengeの保証範囲・検証手順は[ローカル認証基盤](docs/LOCAL_IDENTITY.md)を参照してください。
+
+APIの参照実装はユーザー指定[blindlog-api固定commit](https://github.com/zunda-pixel/blindlog-api/tree/82a13ed73fff44984e8954781d669cf8320883ea)です。[構成・compiler設定・依存の対応表](docs/BLINDLOG_REFERENCE.md)に従います。
