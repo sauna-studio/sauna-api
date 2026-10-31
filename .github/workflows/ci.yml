@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   policy:
-    uses: sauna-studio/.github/.github/workflows/reusable-repository.yml@075c6695309d28baad2dc1391d7d3821b81142cc
+    uses: sauna-studio/.github/.github/workflows/reusable-repository.yml@84222ff551e9b6e9bab6ba4f29fe3ddb990b37cb
     permissions:
       contents: read
   openapi:
@@ -29,6 +29,6 @@ jobs:
       - run: python scripts/validate_openapi.py
       - run: python -m unittest discover -s scripts -p 'test_*.py' -v
   swift:
-    uses: sauna-studio/.github/.github/workflows/reusable-swift.yml@075c6695309d28baad2dc1391d7d3821b81142cc
+    uses: sauna-studio/.github/.github/workflows/reusable-swift.yml@84222ff551e9b6e9bab6ba4f29fe3ddb990b37cb
     permissions:
       contents: read
