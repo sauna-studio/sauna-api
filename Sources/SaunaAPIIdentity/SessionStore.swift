@@ -45,14 +45,14 @@ public struct AuthSessionToken: Sendable, CustomStringConvertible, CustomDebugSt
     guard bytes.count == 32 else { throw AuthenticationError.invalidInput }
   }
   public var encoded: String { authEncode(bytes) }
-  var digest: Data { Data(SHA256.hash(data: bytes)) }
+  package var digest: Data { Data(SHA256.hash(data: bytes)) }
   public var csrfToken: String {
     authEncode(
       Data(
         HMAC<SHA256>.authenticationCode(
           for: Data("sauna.csrf.v1".utf8), using: SymmetricKey(data: bytes))))
   }
-  func verifyCSRF(_ value: String) throws {
+  package func verifyCSRF(_ value: String) throws {
     guard let code = try? authDecode(value, maximum: 32), code.count == 32,
       HMAC<SHA256>.isValidAuthenticationCode(
         code, authenticating: Data("sauna.csrf.v1".utf8), using: SymmetricKey(data: bytes))
@@ -127,6 +127,31 @@ public struct SessionStore: Sendable {
   public func resolve(token: AuthSessionToken) async throws -> AuthenticatedSession {
     try await authenticationDeadline { try await resolveOperation(token: token) }
   }
+  package func withSessionTransaction<Value: Sendable>(
+    token: AuthSessionToken,
+    operation: @escaping @concurrent @Sendable (PostgresConnection, AuthenticatedSession) async throws -> Value
+  ) async throws -> Value {
+    // Autocommit can persist a blocked UPDATE after the client closes its lease.
+    // Keep the operation inside BEGIN/COMMIT so deadline cancellation rolls back
+    // before a later row-lock release can make it durable (Issue #59).
+    try await authenticationDeadline {
+      try await authenticationTransaction(client) { connection in
+        let session: AuthenticatedSession
+        do { session = try await resolve(token: token, on: connection) }
+        catch { throw authError(error) }
+        return try await operation(connection, session)
+      }
+    }
+  }
+  private func resolve(token: AuthSessionToken, on connection: PostgresConnection) async throws -> AuthenticatedSession {
+    let rows = try await authQuery(
+      AuthTypedQueries.sessionLookup(tokenHash: token.digest, origin: relyingParty.origin),
+      on: connection)
+    for try await (userID, expiresAt) in rows.decode((UUID, Date).self) {
+      return .init(subject: VerifiedSubject(userID: userID), expiresAt: expiresAt, csrfToken: token.csrfToken)
+    }
+    throw AuthenticationError.rejected
+  }
   public func revoke(token: AuthSessionToken, csrfToken: String) async throws {
     try await authenticationDeadline {
       try await revokeOperation(token: token, csrfToken: csrfToken)
@@ -140,15 +165,7 @@ public struct SessionStore: Sendable {
   private func resolveOperation(token: AuthSessionToken) async throws -> AuthenticatedSession {
     do {
       return try await authenticationConnection(client) { connection in
-        let rows = try await authQuery(
-          AuthTypedQueries.sessionLookup(tokenHash: token.digest, origin: relyingParty.origin),
-          on: connection)
-        for try await (userID, expiresAt) in rows.decode((UUID, Date).self) {
-          return .init(
-            subject: VerifiedSubject(userID: userID), expiresAt: expiresAt,
-            csrfToken: token.csrfToken)
-        }
-        throw AuthenticationError.rejected
+        try await resolve(token: token, on: connection)
       }
     } catch { throw authError(error) }
   }

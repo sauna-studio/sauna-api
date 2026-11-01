@@ -1,5 +1,11 @@
 # ローカルAtlas migration
 
+## 現在の利用状態（2026-11-01）
+
+`sauna_atlas_replay`は現在ローカルAPI/Webの利用中DBであり、使い捨てではない。`scripts/local_migrations.py test`はそのpublic schemaをresetするため、現在のDBでは実行しない。所有markerが一致しても利用中データを破棄する許可にはならない。fixtureの掃除は自分が作成した正確なIDを照合して個別に行い、schema/DB/volumeをresetしない。
+
+以下のscratch準備・reset手順と実行結果は初期段階の履歴であり、現在の実行許可や最新CIの証明ではない。migrationの受入条件はIssue8で別途追跡する。新規の使い捨て検証環境が必要なら利用中の固定名へ流用せず、隔離と所有の設計を先に行う。
+
 対象: [Issue8 / B04](https://github.com/sauna-studio/sauna-api/issues/8)と[Issue9 / B05](https://github.com/sauna-studio/sauna-api/issues/9)のDB部分。Issue6/7のローカルHTTP/接続pool実装に続く作業であり、未push・未mergeの積み重ねである。
 
 ## 正本と手順
@@ -12,8 +18,8 @@
 .venv/bin/python scripts/local_migrations.py generate --name describe_change
 # trusted baseは既存migrationが入ったcommit。CI導入時はPR base SHAを指定する
 .venv/bin/python scripts/local_migrations.py guard --base HEAD
-# disposable replay DBで空からのapply/reapply、drift canary、app role SQL tests
-.venv/bin/python scripts/local_migrations.py test
+# 初期の使い捨て環境だけの破壊的検証。現在のreplay DBでは実行禁止。
+# .venv/bin/python scripts/local_migrations.py test
 # review後、ローカル開発DBだけへforward apply
 .venv/bin/python scripts/local_migrations.py apply
 .venv/bin/python scripts/local_migrations.py verify

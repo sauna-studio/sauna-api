@@ -16,6 +16,8 @@ tags:
   description: Public service metadata without customer or operational details.
 - name: Authentication
   description: Local Passkey registration, signed UV authentication and revocable sessions.
+- name: LocalFacility
+  description: Loopback local fixture staff authorization; Workspace verification remains separate.
 paths:
   /health:
     get:
@@ -1021,8 +1023,120 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PasskeyFinishRequest'
+  /staff/facilities/{facilityID}/products:
+    get:
+      operationId: staffListProducts
+      tags: [LocalFacility]
+      summary: List products visible to a local fixture staff membership
+      description: Local-only authenticated staff-origin projection. Does not verify Workspace employment or expose a public customer catalog.
+      security: [{StaffSession: []}]
+      parameters:
+      - {name: Origin, in: header, required: true, schema: {type: string, enum: ['http://localhost:5174']}}
+      - {name: facilityID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 100}}
+      responses:
+        '200':
+          description: Active member's bounded product projection; an authorized empty facility returns an empty list.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LocalFacilityProducts'}
+        '400': {$ref: '#/components/responses/LocalFacilityBadRequest'}
+        '401': {$ref: '#/components/responses/LocalFacilityUnauthorized'}
+        '403': {$ref: '#/components/responses/LocalFacilityForbidden'}
+        '404': {$ref: '#/components/responses/LocalFacilityNotFound'}
+        '413': {$ref: '#/components/responses/LocalFacilityTooLarge'}
+        '429': {$ref: '#/components/responses/LocalFacilityRateLimited'}
+        '503': {$ref: '#/components/responses/LocalFacilityUnavailable'}
+  /staff/facilities/{facilityID}/products/{productID}:
+    get:
+      operationId: staffGetProduct
+      tags: [LocalFacility]
+      summary: Read a facility-scoped local staff product
+      description: Local-only fixture membership authorization, not Workspace employment verification. Denied and missing resources share a fixed 404. Concurrent revocation follows READ COMMITTED statement snapshot semantics.
+      security: [{StaffSession: []}]
+      parameters:
+      - {name: Origin, in: header, required: true, schema: {type: string, enum: ['http://localhost:5174']}}
+      - {name: facilityID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: productID, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Facility product projection.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LocalFacilityProduct'}
+        '400': {$ref: '#/components/responses/LocalFacilityBadRequest'}
+        '401': {$ref: '#/components/responses/LocalFacilityUnauthorized'}
+        '403': {$ref: '#/components/responses/LocalFacilityForbidden'}
+        '404': {$ref: '#/components/responses/LocalFacilityNotFound'}
+        '413': {$ref: '#/components/responses/LocalFacilityTooLarge'}
+        '429': {$ref: '#/components/responses/LocalFacilityRateLimited'}
+        '503': {$ref: '#/components/responses/LocalFacilityUnavailable'}
+    patch:
+      operationId: staffRenameProduct
+      tags: [LocalFacility]
+      summary: Rename a facility-scoped local staff product
+      description: Local-only fixture membership authorization, not Workspace employment verification. Denied and missing resources share a fixed 404. Concurrent revocation follows READ COMMITTED statement snapshot semantics.
+      security: [{StaffSession: []}]
+      parameters:
+      - {name: Origin, in: header, required: true, schema: {type: string, enum: ['http://localhost:5174']}}
+      - {name: facilityID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: productID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: X-Sauna-CSRF, in: header, required: true, schema: {type: string, minLength: 43, maxLength: 43}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/LocalFacilityRename'}
+      responses:
+        '200':
+          description: Facility product projection.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LocalFacilityProduct'}
+        '400': {$ref: '#/components/responses/LocalFacilityBadRequest'}
+        '401': {$ref: '#/components/responses/LocalFacilityUnauthorized'}
+        '403': {$ref: '#/components/responses/LocalFacilityForbidden'}
+        '404': {$ref: '#/components/responses/LocalFacilityNotFound'}
+        '413': {$ref: '#/components/responses/LocalFacilityTooLarge'}
+        '429': {$ref: '#/components/responses/LocalFacilityRateLimited'}
+        '503': {$ref: '#/components/responses/LocalFacilityUnavailable'}
 components:
   responses:
+    LocalFacilityBadRequest:
+      description: Fixed local facility error without resource existence or authentication details.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/LocalFacilityProblem'}
+    LocalFacilityUnauthorized:
+      description: Fixed local facility error without resource existence or authentication details.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/LocalFacilityProblem'}
+    LocalFacilityForbidden:
+      description: Fixed local facility error without resource existence or authentication details.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/LocalFacilityProblem'}
+    LocalFacilityNotFound:
+      description: Fixed local facility error without resource existence or authentication details.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/LocalFacilityProblem'}
+    LocalFacilityTooLarge:
+      description: Fixed local facility error without resource existence or authentication details.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/LocalFacilityProblem'}
+    LocalFacilityRateLimited:
+      description: Fixed local facility error without resource existence or authentication details.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/LocalFacilityProblem'}
+    LocalFacilityUnavailable:
+      description: Fixed local facility error without resource existence or authentication details.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/LocalFacilityProblem'}
     ServiceUnavailable:
       description: The service is temporarily unavailable; no internal details are returned.
       content:
@@ -1036,6 +1150,36 @@ components:
                 title: Service Unavailable
                 status: 503
   schemas:
+    LocalFacilityProduct:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, minLength: 1, maxLength: 200}
+    LocalFacilityProducts:
+      type: object
+      additionalProperties: false
+      required: [products]
+      properties:
+        products:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/LocalFacilityProduct'}
+    LocalFacilityRename:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200}
+    LocalFacilityProblem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status]
+      properties:
+        type: {type: string, enum: ['about:blank']}
+        title: {type: string, enum: ['Bad Request', Unauthorized, Forbidden, 'Not Found', 'Payload Too Large', 'Too Many Requests', 'Service Unavailable']}
+        status: {type: integer, enum: [400, 401, 403, 404, 413, 429, 503]}
     Health:
       type: object
       additionalProperties: false

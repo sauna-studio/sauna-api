@@ -117,3 +117,17 @@ GitHub CodexのP2指摘により、W3Cの識別済みaccountに対するuserHand
 明示swift buildと最新test名でのfull Swift89件（Server21/Identity40/Database23/Contract5、PG接続・skip0）、OpenAPI schema/examples、実Atlas binaryを明示したPython31件/skip0が成功した。Sources/Package/lock/db/schema/migrationsは既存main4eea6f0から変更せず、回復endpointや新secretを追加していない。今回localのLinux release image再buildや既存ブラウザーceremonyの再実行は行わず、production byte不変の確認と最新CIを別gateにする。否定境界は回復機能全体の実装完了を意味しない。ADR0016とIssue56へ設計・実測を関連付け、親Issue13は未提供の回復等を残して扱う。
 
 独立Reviewも最新名のRecoveryBoundaryTestsを同じ実PG条件で1件再実行して成功（0.250秒、skip0）。foreign暗号positiveとfreshownerpositive、spend/未認可/本人key・session保全を確認し、production sourceの追加変更は無い。
+
+## Issue59: ローカル施設HTTPのtenant境界（2026-11-01）
+
+親Issue9のローカルsliceとして、staff origin/sessionと現在のDB membership/roleを用いる一覧・詳細・名称更新を追加した。OpenAPIが正本で生成物は未commit。Workspace社員確認や本番管理API、商品カタログIssue16全体の完成ではない。詳細は[LOCAL_FACILITY_HTTP.md](LOCAL_FACILITY_HTTP.md)、設計はsauna-docs ADR0021。
+
+- `swift build --force-resolved-versions`：Xcode27.2/Swift6.4.2、厳格compiler policyで成功。既存のunused依存とPostgresNIO fork identityのSwiftPM warningは残る。
+- `swift test --force-resolved-versions`：Apple containerの既存PostgreSQL18/replay DBへ接続して94件成功（server26、identity40、database23、contract5）。新規5件はlive HTTPで二施設越境・role/失効・CSRF・customer拒否・固定404・strict JSONと、直接session-bound SQLの再照合・blocked update deadlineを含む。
+- 新規5件の先行実行で、autocommit UPDATEは10秒timeout後にleaseをcloseしてもrow lock解放後に遅延commitする問題を再現した。既存のscoped transaction helperへ変更し、cancel検査後にだけCOMMITする恒久修正を施した。対象は新規未mergeコードで、Issue59に修正と回帰を集約する。再実行とfull suiteの両方で10秒blocked update後に名称が変わらず、poolを再利用できた。
+- OpenAPI3.1/schema/4既存response examples検証成功。Python31件は所有worktreeでは既存Atlas検査1件skip、rootの検証では公式Atlasのdigestを確認した明示pathを使い31件すべて成功。Atlas apply/test/resetは実行していない。
+- 独立Review/Securityを実装と並行起動。fixture lifetimeの許容上限、raw driver errorの固定化、session lookupだけでなく各SQLの再検査を検証する回帰が必要という指摘を反映した。最終の独立実行結果、GitHub Actions/Codex最新HEADの結果はPRへ記録する。
+
+テストは既存の所有password fileをアプリ内部で再利用し、秘密値を出力していない。synthetic session fixtureはmodule内部issuerを使うため、この5件単体をPasskey署名ログインの実証とは扱わない。署名/UVは既存identity/management testsで別途検証した。生成したfixture UUIDだけを成功・例外の両経路で依存順に削除し、DB/schema/volumeをresetしていない。既存サービスや不明な行は削除していない。
+
+READ COMMITTEDのstatement snapshotは、失効と進行中更新の全順序化やcommit直前の時刻再検査を保証しない。COMMITと同時のcancel/応答喪失は結果不明となり得る。実Workspace・実Safari/iOS・施設UI・本番設定は未検証。新たな外部認証情報は不要だった。
