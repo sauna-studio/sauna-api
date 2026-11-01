@@ -131,3 +131,14 @@ GitHub CodexのP2指摘により、W3Cの識別済みaccountに対するuserHand
 テストは既存の所有password fileをアプリ内部で再利用し、秘密値を出力していない。synthetic session fixtureはmodule内部issuerを使うため、この5件単体をPasskey署名ログインの実証とは扱わない。署名/UVは既存identity/management testsで別途検証した。生成したfixture UUIDだけを成功・例外の両経路で依存順に削除し、DB/schema/volumeをresetしていない。既存サービスや不明な行は削除していない。
 
 READ COMMITTEDのstatement snapshotは、失効と進行中更新の全順序化やcommit直前の時刻再検査を保証しない。COMMITと同時のcancel/応答喪失は結果不明となり得る。実Workspace・実Safari/iOS・施設UI・本番設定は未検証。新たな外部認証情報は不要だった。
+
+
+## Issue8: 隔離したAtlas migration CI（2026-11-01）
+
+既存ローカルDBをresetする手順から、Apple containerの新しいsocket-only PostgreSQL18 clusterを使う検証を分離した。`scripts/migration_ci.py --runtime apple --base 42cb47570f17feca3f1206a29b10b78a1989eb0b`で、公式Atlas1.3.0のhost/Linux arm64 digest照合、trusted Git guard、実Atlas hash/validate後の履歴改変拒否、破壊的DDL拒否、fresh apply/reapply journal同一/schema parity/実drift検出と保持/制限app roleのSQL4suiteが成功した。独立Reviewも別の新しいclusterで同じ実行が成功した。
+
+新規7件の安全性テストを含むPython38件はskipなしで成功（既存Atlas checksum integrationには公式digest確認済みbinary pathを明示）。actionlint、bash構文、gh actions-lock --no-narrow生成と--verifyが成功した。workflow内で同じ完全SHAのcheckoutを追加したため、生成lockfileの依存集合は変化せずbyte同一だった。Swift source/schema/migration SQLは変更しておらず、このCI/helper変更だけのためのローカルSwift full test再実行はしていない。実GitHub Actions/Codex最新HEADの成否はPRへ記録する。
+
+並行Review/Securityで、candidateのatlas.sum symlinkをcanaryへコピーしてhost Atlas hashを実行すると外部fileを書き換え得る問題を発見した。実装を入力の早期検証・O_NOFOLLOW/regular確認・whitelist byte snapshotへ変更し、外部sentinel不変かつAtlas未実行となる回帰を追加した。新規未mergeコード内の恒久修正であり、既存DBに対する回避策は導入していない。container cleanupはIDだけの一覧を読み、自分の正確なUUID名とlabelだけをinspect/deleteする。
+
+既存のsauna_local/sauna_atlas_dev/sauna_atlas_replay、volume、稼働サービス、認証情報には接続・変更していない。新しいpassword/key/token、trust認証、host設定変更は不要。ローカルのDocker CLIは使用せず、CIはGitHub標準job containerを使う。CI job networkはnoneではなく、DBのsocket-only/peer/HBA制限を検証する。Linux amd64実jobとrequired check設定は遠隔CI成功後に確認する。
