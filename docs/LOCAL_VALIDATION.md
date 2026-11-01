@@ -109,3 +109,11 @@ Issue53 / PR54で、本人の一覧とfresh署名・UVによる追加/失効を�
 GitHub CodexのP2指摘により、W3Cの識別済みaccountに対するuserHandle null/省略を管理専用internal entryだけで許容した。返却handleの一致と署名/UV等は維持し、discoverable loginの公開entryは引き続きhandle必須。DB経路で省略、HTTP経路でnull、crypto回帰でempty/wrong/type/base64不正/誤署名/UV無しと匿名loginの拒否を確認した。対応commit・検証結果をreview threadへ返信し、新しいreview roundを依頼している。
 
 最新native API+Bun production BFF+Chromium/CDPの2authenticator検証もcustomer/staff各2caseが成功した。追加後の再login、別keyによる失効、最後key保護と跨profileの全session失効を確認し、鍵/tokenのexportやtrace/video/screenshot/HARは生成していない。Apple-container/Linux releaseと最新HEADのGitHub CI/Codexは[PR54](https://github.com/sauna-studio/sauna-api/pull/54)へsnapshot別の成否を記録し、旧snapshotやDB未設定skipで最新runtimeの合格を代用しない。Safari/実Apple Passkey・全credential喪失の本人回復・Apple保存契約・Workspace/本番設定は未検証/未実装のままであり、Issue13全体は閉じない。
+
+## Recovery denial boundary (2026-11-01)
+
+ユーザーは全喪失回復のfail-closedを維持し、設計・否定テストだけを選択した。RecoveryBoundaryTestsは、本人の有効session/CSRF/正しいnonceに別accountの正当な署名UVを提出しても追加認可できないことを実PGで確認する。foreign署名の暗号positiveと別freshintentのownerpositiveを入れ、単に壊れた入力を拒否しただけのfalsepassを避けた。拒否後もnonceはspend、認可/登録nonceは未設定、唯一key/sessionは不変である。既存helperが追跡するfixtureUUIDだけをcleanupし、DB/volume/サービスをresetしない。
+
+明示swift buildと最新test名でのfull Swift89件（Server21/Identity40/Database23/Contract5、PG接続・skip0）、OpenAPI schema/examples、実Atlas binaryを明示したPython31件/skip0が成功した。Sources/Package/lock/db/schema/migrationsは既存main4eea6f0から変更せず、回復endpointや新secretを追加していない。今回localのLinux release image再buildや既存ブラウザーceremonyの再実行は行わず、production byte不変の確認と最新CIを別gateにする。否定境界は回復機能全体の実装完了を意味しない。ADR0016とIssue56へ設計・実測を関連付け、親Issue13は未提供の回復等を残して扱う。
+
+独立Reviewも最新名のRecoveryBoundaryTestsを同じ実PG条件で1件再実行して成功（0.250秒、skip0）。foreign暗号positiveとfreshownerpositive、spend/未認可/本人key・session保全を確認し、production sourceの追加変更は無い。
