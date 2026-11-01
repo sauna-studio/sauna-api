@@ -78,7 +78,7 @@ actor AuthRequestLimiter {
 }
 
 /// Cookie handling is explicit because the pinned generator does not support
-/// cookie parameters. No cookie/token values enter exception descriptions/logs.
+/// cookie parameters (Issue #51). No cookie/token values enter exception descriptions/logs.
 struct AuthTransportMiddleware: ServerMiddleware {
   let limiter: AuthRequestLimiter
   init(limiter: AuthRequestLimiter = .init()) { self.limiter = limiter }
@@ -146,8 +146,9 @@ struct AuthTransportMiddleware: ServerMiddleware {
               == "application/json"
           else { throw AuthHTTPFailure(status: .badRequest) }
           do {
-            try validateAuthenticationTransportJSON(
-              bytes, finish: operationID.hasSuffix("Finish") || operationID.hasPrefix("finish"))
+            let shape: AuthenticationTransportBody = operationID == "beginPasskeyRevocation"
+              ? .revocationOptions : (operationID.hasPrefix("finish") ? .finish : .empty)
+            try validateAuthenticationTransportJSON(bytes, shape: shape)
           } catch { throw AuthHTTPFailure(status: .badRequest) }
         }
         replay = HTTPBody(bytes)

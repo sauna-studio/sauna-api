@@ -1,7 +1,7 @@
 -- Business schema source of truth; generate forward-only Atlas migrations.
 -- Composite keys prevent cross-facility references. They are not authorization:
 -- trusted tenant context and access policies are implemented in later work.
--- No credential, payment instrument, customer name or email is stored here.
+-- No private key, raw session secret, payment instrument, customer name or email is stored here.
 CREATE TABLE public.facilities (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL,
@@ -162,3 +162,38 @@ CREATE TABLE public.auth_sessions (
 );
 CREATE INDEX auth_sessions_user_idx ON public.auth_sessions(user_id);
 CREATE INDEX auth_sessions_expiry_idx ON public.auth_sessions(expires_at);
+
+ALTER TABLE public.auth_sessions ADD CONSTRAINT auth_session_user_hash_unique UNIQUE (user_id, token_hash);
+CREATE TABLE public.passkey_management_intents (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.passkey_accounts(user_id),
+    session_hash bytea NOT NULL,
+    rp_id text NOT NULL,
+    origin text NOT NULL,
+    action text NOT NULL,
+    target_credential_id bytea,
+    challenge bytea NOT NULL,
+    created_at timestamptz NOT NULL,
+    expires_at timestamptz NOT NULL,
+    consumed_at timestamptz,
+    authorization_credential_id bytea,
+    authorized_at timestamptz,
+    registration_challenge bytea,
+    registration_consumed_at timestamptz,
+    CONSTRAINT passkey_management_session_owner_fk FOREIGN KEY (user_id,session_hash) REFERENCES public.auth_sessions(user_id,token_hash),
+    CONSTRAINT passkey_management_target_owner_fk FOREIGN KEY (user_id,target_credential_id) REFERENCES public.passkey_credentials(user_id,id),
+    CONSTRAINT passkey_management_authorizer_owner_fk FOREIGN KEY (user_id,authorization_credential_id) REFERENCES public.passkey_credentials(user_id,id),
+    CONSTRAINT passkey_management_action CHECK (action IN ('add','revoke')),
+    CONSTRAINT passkey_management_target CHECK ((action='add' AND target_credential_id IS NULL) OR (action='revoke' AND target_credential_id IS NOT NULL)),
+    CONSTRAINT passkey_management_hash CHECK (octet_length(session_hash)=32),
+    CONSTRAINT passkey_management_nonce CHECK (octet_length(challenge)=32 AND (registration_challenge IS NULL OR octet_length(registration_challenge)=32)),
+    CONSTRAINT passkey_management_rp CHECK (rp_id='localhost' AND origin IN ('http://localhost:5173','http://localhost:5174')),
+    CONSTRAINT passkey_management_expiry CHECK (isfinite(created_at) AND isfinite(expires_at) AND expires_at>created_at AND expires_at<=created_at+interval '5 minutes'),
+    CONSTRAINT passkey_management_consumed CHECK (consumed_at IS NULL OR (isfinite(consumed_at) AND consumed_at>=created_at AND consumed_at<expires_at)),
+    CONSTRAINT passkey_management_authorization CHECK (
+        (authorized_at IS NULL AND authorization_credential_id IS NULL AND registration_challenge IS NULL) OR
+        (authorized_at IS NOT NULL AND isfinite(authorized_at) AND authorization_credential_id IS NOT NULL AND consumed_at IS NOT NULL AND authorized_at>=consumed_at AND authorized_at<expires_at AND ((action='add' AND registration_challenge IS NOT NULL) OR (action='revoke' AND registration_challenge IS NULL AND authorization_credential_id<>target_credential_id)))
+    ),
+    CONSTRAINT passkey_management_registration_consumed CHECK (registration_consumed_at IS NULL OR (action='add' AND authorized_at IS NOT NULL AND isfinite(registration_consumed_at) AND registration_consumed_at>=authorized_at AND registration_consumed_at<expires_at))
+);
+CREATE INDEX passkey_management_expiry_idx ON public.passkey_management_intents(expires_at);

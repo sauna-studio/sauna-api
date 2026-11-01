@@ -4,18 +4,18 @@ import Testing
 import SaunaAPIDatabase
 @testable import SaunaAPIIdentity
 
-private actor AuthFixtureRecords {
+actor AuthFixtureRecords {
     var challenges: [UUID] = []
     var users: [UUID] = []
     func challenge(_ id: UUID) { challenges.append(id) }
     func user(_ id: UUID) { users.append(id) }
 }
-private struct TestOptions: Decodable {
+struct TestOptions: Decodable {
     struct User: Decodable { let id: String }
     let challenge: String
     let user: User?
 }
-private func withAuthDatabase(_ body: @escaping @Sendable (PostgresClient, AuthFixtureRecords) async throws -> Void) async throws {
+func withAuthDatabase(_ body: @escaping @Sendable (PostgresClient, AuthFixtureRecords) async throws -> Void) async throws {
     var env = ProcessInfo.processInfo.environment
     env["PGDATABASE"] = "sauna_atlas_replay"
     let configuration = try LocalDatabaseConfiguration(environment: env)
@@ -23,6 +23,7 @@ private func withAuthDatabase(_ body: @escaping @Sendable (PostgresClient, AuthF
         let records = AuthFixtureRecords()
         func cleanup() async throws {
             for user in await records.users {
+                _ = try await client.query("DELETE FROM public.passkey_management_intents WHERE user_id=\(user)").collect()
                 _ = try await client.query("DELETE FROM public.auth_sessions WHERE user_id=\(user)").collect()
                 _ = try await client.query("DELETE FROM public.passkey_credentials WHERE user_id=\(user)").collect()
                 _ = try await client.query("DELETE FROM public.passkey_accounts WHERE user_id=\(user)").collect()
@@ -37,12 +38,12 @@ private func withAuthDatabase(_ body: @escaping @Sendable (PostgresClient, AuthF
         catch { try await cleanup(); throw error }
     }
 }
-private struct RegisteredFixture: Sendable {
+struct RegisteredFixture: Sendable {
     let key: VirtualPasskey
     let user: UUID
     let handle: Data
 }
-private func registration(client: PostgresClient, records: AuthFixtureRecords, key: VirtualPasskey = .init(), finish: Bool = true) async throws -> (RegisteredFixture, PasskeyOptions, PasskeyFlowBinding) {
+func registration(client: PostgresClient, records: AuthFixtureRecords, key: VirtualPasskey = .init(), finish: Bool = true) async throws -> (RegisteredFixture, PasskeyOptions, PasskeyFlowBinding) {
     let service = try PasskeyAuthService(client: client, relyingParty: .customer)
     let binding = PasskeyFlowBinding.generate()
     let options = try await service.beginRegistration(binding: binding)
@@ -60,19 +61,19 @@ private func registration(client: PostgresClient, records: AuthFixtureRecords, k
     }
     return (.init(key: key, user: user, handle: try authDecode(handle)), options, binding)
 }
-private func loginOptions(_ service: PasskeyAuthService, records: AuthFixtureRecords) async throws -> (PasskeyOptions, PasskeyFlowBinding, Data) {
+func loginOptions(_ service: PasskeyAuthService, records: AuthFixtureRecords) async throws -> (PasskeyOptions, PasskeyFlowBinding, Data) {
     let binding = PasskeyFlowBinding.generate()
     let options = try await service.beginAuthentication(binding: binding)
     await records.challenge(options.challengeID)
     let payload = try JSONDecoder().decode(TestOptions.self, from: options.optionsJSON)
     return (options, binding, try authDecode(payload.challenge))
 }
-private func signedLogin(_ fixture: RegisteredFixture, service: PasskeyAuthService, records: AuthFixtureRecords, counter: UInt32, ttl: Int = 28_800) async throws -> SessionGrant {
+func signedLogin(_ fixture: RegisteredFixture, service: PasskeyAuthService, records: AuthFixtureRecords, counter: UInt32, ttl: Int = 28_800) async throws -> SessionGrant {
     let (options, binding, nonce) = try await loginOptions(service, records: records)
     return try await service.finishAuthentication(challengeID: options.challengeID, binding: binding,
         credentialJSON: fixture.key.assertion(challenge: nonce, counter: counter, handle: fixture.handle), sessionTTLSeconds: ttl)
 }
-private func rejected(_ body: () async throws -> Void) async {
+func rejected(_ body: () async throws -> Void) async {
     do { try await body(); Issue.record("Expected authentication rejection") }
     catch { let fixed = error as? AuthenticationError == .rejected; #expect(fixed) }
 }

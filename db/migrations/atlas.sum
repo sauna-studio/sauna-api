@@ -1,4 +1,5 @@
-h1:QR79Pm5uEHLA89U6FZmplU3pW++Ua8nnklg3ARnxUmA=
+h1:RPWA8w7Xo0B0CQUaArPEUBjF/f0r/JXyvKzdRsCl6mo=
 20261031164426_initial_schema.sql h1:kvYqCyuGIeSIYr8Wjr+8TSWn0VwZKj0zd2LmDSGm55I=
 20261031165105_webauthn_challenge_lifecycle.sql h1:WtYCDOsmvFEUnDnzmcYD68Dw9PKXwIrgpV4pRZ8sois=
 20261031172216_passkey_accounts_sessions.sql h1:uOMkwI/MT8Yae4wHCzEX1UUwSsvzTsB1dSDhncA3KQk=
+20261101011719_passkey_management_intents.sql h1:676MOfDFOfprUzNgAtDPTSK2ybjHIZcMX3qc2ta5ugc=

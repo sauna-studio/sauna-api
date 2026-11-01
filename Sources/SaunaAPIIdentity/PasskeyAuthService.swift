@@ -145,12 +145,19 @@ public struct PasskeyAuthService: Sendable {
       } catch { throw AuthenticationError.invalidInput }
       let credentialID = try authDecode(reference.id)
       return try await authenticationTransaction(client) { connection in
+        let owners = try await authQuery("SELECT user_id FROM public.passkey_credentials WHERE id=\(credentialID)", on: connection)
+        var lockedUserID: UUID?
+        for try await owner in owners.decode(UUID.self) { lockedUserID = owner }
+        guard let lockedUserID else { throw AuthenticationError.rejected }
+        // Credential management and session issuance share one account lock;
+        // otherwise a concurrent login could escape a management revoke-all.
+        _ = try await lockAuthenticationAccount(lockedUserID, on: connection)
         let rows = try await authQuery(
           AuthTypedQueries.credentialForAuthentication(id: credentialID), on: connection)
         var record: (UUID, Data, Data, Int64, Bool)?
         for try await value in rows.decode((UUID, Data, Data, Int64, Bool).self) { record = value }
         guard let (userID, handle, key, counter, eligible) = record,
-          let oldCounter = UInt32(exactly: counter)
+          userID == lockedUserID, let oldCounter = UInt32(exactly: counter)
         else { throw AuthenticationError.rejected }
         let proof = try verifier.verifyAssertion(
           credentialJSON: credentialJSON, challenge: challenge.challenge,
