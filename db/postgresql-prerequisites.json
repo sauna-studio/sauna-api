@@ -1,0 +1,6 @@
+{
+  "extension": "btree_gist",
+  "version": "1.8",
+  "schema": "extensions",
+  "owner": "postgres"
+}

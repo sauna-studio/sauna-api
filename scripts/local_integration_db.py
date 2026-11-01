@@ -14,6 +14,7 @@ import time
 import uuid
 
 import migration_ci
+import postgresql_prerequisites as prerequisites
 from pglast import parse_sql, enums
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +26,8 @@ umask 077
 run_dir=$(mktemp -d /tmp/sauna-integration.XXXXXXXX)
 cp /input/schema.sql "$run_dir/schema.sql"
 cp /input/start.sh "$run_dir/start.sh"
+cp /input/prerequisites-bootstrap.sql "$run_dir/prerequisites-bootstrap.sql"
+cp /input/prerequisites-verify.sql "$run_dir/prerequisites-verify.sql"
 cp /approved/app-password "$run_dir/app-password"
 chmod 600 "$run_dir/app-password"
 chown -R postgres:postgres "$run_dir"
@@ -47,6 +50,12 @@ CREATE ROLE sauna_admin LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION 
 CREATE ROLE sauna_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE DATABASE sauna_atlas_replay OWNER sauna_admin;
 SQL
+# Only fixed reviewed prerequisite SQL is staged; no data-defined superuser program.
+bootstrap_sql=$(cat "$run_dir/prerequisites-bootstrap.sql")
+verify_sql=$(cat "$run_dir/prerequisites-verify.sql")
+psql --no-password --no-psqlrc --host="$socket" --username=postgres --dbname=sauna_atlas_replay --set=ON_ERROR_STOP=1 --command="SET statement_timeout='10s';
+$bootstrap_sql" > "$run_dir/prerequisites.log" 2>&1
+[[ $(psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname=sauna_atlas_replay --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="$verify_sql") == 1 ]]
 psql --no-password --no-psqlrc --host="$socket" --username=postgres --dbname=postgres --set=ON_ERROR_STOP=1 --set=secret_file="$run_dir/app-password" <<'SQL' >> "$run_dir/setup.log" 2>&1
 SELECT set_config('sauna.integration_password_file', :'secret_file', false);
 DO $body$
@@ -67,6 +76,7 @@ REVOKE CREATE ON SCHEMA public FROM PUBLIC, sauna_app;
 GRANT USAGE ON SCHEMA public TO sauna_app;
 GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO sauna_app;
 SQL
+[[ $(psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname=sauna_atlas_replay --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="$verify_sql") == 1 ]]
 touch /tmp/sauna-integration-ready
 while sleep 30; do :; done
 '''
@@ -149,6 +159,7 @@ def run_tests(scratch=None, test_filter=None):
     ensure_port_free()
     snapshot = migration_ci.validated_inputs()
     validate_schema(snapshot['db/schema.sql'])
+    prerequisites.validate_manifest(snapshot.get('db/postgresql-prerequisites.json'))
     password = approved_password()
     owner = str(uuid.uuid4())
     name = 'sauna-integration-db-' + owner
@@ -161,6 +172,8 @@ def run_tests(scratch=None, test_filter=None):
         private.mkdir(mode=0o700)
         (public / 'schema.sql').write_bytes(snapshot['db/schema.sql'])
         (public / 'start.sh').write_text(START)
+        (public / 'prerequisites-bootstrap.sql').write_text(prerequisites.BOOTSTRAP_SQL)
+        (public / 'prerequisites-verify.sql').write_text(prerequisites.VERIFY_SQL)
         stage_password(password, private / 'app-password')
         try:
             command(['container', 'run', '--detach', '--rm', '--name', name,

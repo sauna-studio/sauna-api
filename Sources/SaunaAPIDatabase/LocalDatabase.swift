@@ -117,6 +117,7 @@ public enum LocalDatabase {
             if let error = error as? AuthenticationError { throw error }
             if let error = error as? PasskeyVerificationError { throw error }
             if let error = error as? FacilityStoreError { throw error }
+            if let error = error as? InventoryError { throw error }
             if let error = error as? PasskeyChallengeError { throw error }
             // Never stringify credentials, raw driver errors, queries, or parameter bindings.
             throw LocalDatabaseError.unavailable

@@ -16,6 +16,7 @@ class IsolatedMigrationSafetyTests(unittest.TestCase):
     def fixture(self, root):
         for name, content in {
             'db/schema.sql': 'CREATE TABLE fixture(id int);',
+            'db/postgresql-prerequisites.json': json.dumps(ci.prerequisites.EXPECTED),
             'db/migrations/atlas.sum': 'h1:synthetic',
             'db/migrations/20261101000000_fixture.sql': 'CREATE TABLE fixture(id int);',
             'db/tests/001_fixture.sql': 'BEGIN; ROLLBACK;',
@@ -84,11 +85,11 @@ class IsolatedMigrationSafetyTests(unittest.TestCase):
                 path.write_text('NOT AN INPUT')
             with patch.object(ci, 'ROOT', root), patch.object(ci, 'command', return_value=''):
                 snapshot = ci.validated_inputs()
-            self.assertEqual(len(snapshot), 5)
+            self.assertEqual(len(snapshot), 6)
             staged = root / 'stage'
             ci.stage_inputs(staged, snapshot)
             self.assertEqual(sorted(str(p.relative_to(staged)) for p in staged.rglob('*') if p.is_file()), [
-                'db/migrations/20261101000000_fixture.sql', 'db/migrations/atlas.sum', 'db/schema.sql', 'db/tests/001_fixture.sql', 'replay.sh'])
+                'db/migrations/20261101000000_fixture.sql', 'db/migrations/atlas.sum', 'db/postgresql-prerequisites.json', 'db/schema.sql', 'db/tests/001_fixture.sql', 'prerequisites-bootstrap.sql', 'prerequisites-verify.sql', 'replay.sh'])
             # Later source edits cannot change already validated snapshot bytes.
             (root / 'db/schema.sql').write_text('CHANGED AFTER SNAPSHOT')
             self.assertEqual((staged / 'db/schema.sql').read_text(), 'CREATE TABLE fixture(id int);')

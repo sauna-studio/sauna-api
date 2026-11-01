@@ -135,3 +135,9 @@ credential追加・失効は既存keyのfresh署名/UVとsession/CSRFを要求�
 `products.published`を唯一の商品公開flagとし、公開SQLはtrueかつ`product_offerings`の有効条件ありに固定する。施設営業可否や在庫をこのflagから推定しない。kind/施設/商品は複合FKで条件へ束縛し、既存商品の条件を推測してbackfillしない。条件と公開変更はowner/managerの有効staff session/CSRFと同statementの認可を伴い、一つのtransactionでcommitする。価格/通貨を公開カタログDTOへ追加するときは見積もり契約と整数精度を別途設計する。
 
 新schemaを使うSwift PG testsは`python scripts/local_integration_db.py`の新しい使い捨てVM/55433へ実行する。schemaが古い既存55432/replay DBへfixtureを流したり、resetして合わせたりしない。詳細はdocs/LOCAL_PRODUCT_CATALOG.mdを参照。
+
+## 在庫基盤
+
+物理resourceと商品party capacityを混同しない。同じ実体をprivate/shared商品から参照し、施設/resource UUID・半開時刻区間・seat rangeのDB exclusionで競合を拒否する。sharedはcapacity内の単一seat、private/tentは全seat。resource lock待機後は新statementでsession/credential/施設role/enabledを検査する。解放済み履歴もcapacity FKを保持する。Swift DateはPostgresNIOのInt64 microsecond変換前にPG18の範囲と量子化後の非空区間を検証する。
+
+btree_gist1.8の保護schema前提は閉じたmanifestと固定bootstrap SQLで検証し、候補ファイルから任意superuser SQLを生成しない。manifest/schema検証を承認済みpassword読取より前に行う。Atlas CEの拡張lifecycle管理を主張せず、Issue64を参照する。既存DBへの拡張導入はこの使い捨て検証に含まれない。詳細はdocs/LOCAL_INVENTORY.md。
