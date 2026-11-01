@@ -43,25 +43,23 @@ DB操作には10秒のoperation deadlineを設け、取消対象のleased connec
 
 allowCredentials/excludeCredentialsはbrowser hintでありserver認可の代替ではない。request optionsはlibraryのtyped allowCredentialsを使う。creation modelに無いexcludeCredentialsだけをtyped Encodable wrapperで補い、上流採用後の削除を[Issue49](https://github.com/sauna-studio/sauna-api/issues/49)で追跡する。独自transaction取消helperは[Issue50](https://github.com/sauna-studio/sauna-api/issues/50)、cookie transportは[Issue51](https://github.com/sauna-studio/sauna-api/issues/51)で再評価する。設計はsauna-docsのADR0014に記録している。
 
-全credentialを失った本人の回復、Google/メールによる代替login、スタッフの権限だけでのkey追加は実装しない。同期Passkeyと別credentialの事前登録による備えを区別し、本人回復とApple保存契約を含むIssue13全体は未完了として残す。
+全credentialを失った本人の回復、Google/メールによる代替login、スタッフの権限だけでのkey追加は実装しない。同期Passkeyと別credentialの事前登録による備えを区別し、本人回復を含むIssue13全体は未完了として残す。Apple保存契約とlocal session client基盤はsauna-docs ADR0015/0017とsauna-appで実装済みであり、所有RP/Apple設定を伴う実ネイティブPasskey検証とは区別する。
 
 ## ローカル起動と検証
 
 DBはApple containerを使う。既存の承認済みprivate credentialを表示・上書きせず再利用する。別のAPI keyや本番鍵が必要になればユーザー確認まで依存作業を止める。
 
 ```sh
-python3 scripts/local_postgres.py start
-python3 scripts/local_postgres.py configure-role
-# 初期migrationとscratch DBの準備はLOCAL_MIGRATIONS.mdを参照
-.venv/bin/python scripts/local_migrations.py test
+# 既存DB・稼働サービスを再初期化しない。初回の使い捨てDB準備だけLOCAL_MIGRATIONS.mdを参照。
+# local_migrations.py test はreplay schemaをresetするため、利用中のsauna_atlas_replayでは実行しない。
 swift build --force-resolved-versions
-PGPASSWORD_FILE="$PWD/.local/secrets/postgres-app-password" swift test --force-resolved-versions
+PGDATABASE=sauna_atlas_replay PGPASSWORD_FILE="$PWD/.local/secrets/postgres-app-password" swift test --force-resolved-versions
 .venv/bin/python scripts/validate_identity_boundary.py
 .venv/bin/python scripts/validate_openapi.py
 .venv/bin/python -m unittest discover -s scripts -p 'test_*.py'
 
 # Apple containerのDBへ、hostで認証APIを明示的に起動
-SAUNA_LOCAL_AUTH=1 BIND_HOST=127.0.0.1 PORT=8080 \
+SAUNA_LOCAL_AUTH=1 BIND_HOST=127.0.0.1 PORT=8080 PGDATABASE=sauna_atlas_replay \
   PGPASSWORD_FILE="$PWD/.local/secrets/postgres-app-password" \
   swift run --skip-build SaunaAPI
 ```
@@ -70,10 +68,10 @@ SAUNA_LOCAL_AUTH=1 BIND_HOST=127.0.0.1 PORT=8080 \
 
 Webは各repositoryのBun lockfileを使い、`bun run build`後`bun run start`でそれぞれ5173/5174へloopback bindする。`/auth`をlocalhostで開く。`bun run test:auth`は別設定のPlaywright仮想認証器テストで、実API/DBが必要であり、trace/video/screenshot/HAR/storageStateを保存しない。実行結果は[検証記録](LOCAL_VALIDATION.md)を確認する。
 
-DB設定はsauna_local/sauna_atlas_replayだけを許可し、統合testはreplay DBを選ぶ。test中にmigrationのreplay resetを並行実行しない。追加認証testは一時user/challengeを追跡し、session・credential等を依存順に削除する。強制終了で残ったsynthetic行は次回owned replay resetで除去できる。共有.buildを使うbuild/test/identity境界scriptは並行実行しない。
+DB設定はsauna_local/sauna_atlas_replayだけを許可し、統合testはreplay DBを選ぶ。test中にmigrationのreplay resetを並行実行しない。追加認証testは一時user/challengeを追跡し、session・credential等を依存順に削除する。強制終了で残ったsynthetic行は所有する正確なfixture IDを照合して個別に除去する。利用中のreplay DBをresetして掃除しない。共有.buildを使うbuild/test/identity境界scriptは並行実行しない。
 
 ## 残る制限
 
-全credential喪失時の本人回復、Apple token保存契約、期限切れ行cleanup、Workspace社員確認、認証済sessionからの施設HTTP認可、本番設定、分散rate limitは未実装。staff originで認証できることは社員・施設管理者の認可を意味せず、管理操作は公開していない。Issue9/10/15全体の完了とは扱わない。
+全credential喪失時の本人回復、所有RP/Apple設定を伴う実ネイティブPasskey接続、期限切れ行cleanup、Workspace社員確認、Workspace検証を伴う本番の施設HTTP認可、本番設定、分散rate limitは未実装。staff originで認証できることは社員・施設管理者の認可を意味せず、本番の管理操作は公開していない。ローカルのsynthetic membershipによる施設HTTP境界は[LOCAL_FACILITY_HTTP.md](LOCAL_FACILITY_HTTP.md)を参照する。Issue9/10/15全体の完了とは扱わない。
 
 ユーザーはローカル仮想認証器の一時鍵とローカルsession token生成を承認済み。実アカウント・実顧客データは使用しない。TablePro/Safari MCPは接続できておらず、実DBはPostgresNIO/psql/Atlas、build/testはSwift CLI、DBはApple containerを用いる。実Safari/iOS Passkeyは未検証。最終依存でのfull tests、ブラウザー結合、Linux/CI、GitHub Codex最新HEADの成否は別々に記録し、未実行・skip・未着を成功扱いしない。

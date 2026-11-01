@@ -78,7 +78,7 @@ PRには関連Issue、何が変わるか、実行したチェックと結果、�
 
 現在はhealth/versionと、`SAUNA_LOCAL_AUTH=1`で明示的に有効化するローカルPasskey/session HTTPをHummingbirdで実装している。認証有効時のbindはloopbackに限定する。`Sources/SaunaAPIContract/openapi.yaml`を契約の正本とし、生成物をコミットしない。`swift build --force-resolved-versions` / `swift test --force-resolved-versions`を実行する。Python 3.11以上で`pip install -r scripts/requirements.txt`後、`python scripts/validate_openapi.py`と`python -m unittest discover -s scripts -p 'test_*.py' -v`を実行する。
 
-`/health`はDB readinessと分離したliveness、`/version`は公開release定数だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTP serverの成功/エラー応答、PORT境界値、SIGTERM終了を実HTTP・processテストで確認する。DB pool・接続診断と、ローカルPasskey登録・署名/UV検証・session HTTPは実装済み。施設の業務HTTP・Workspace所属認可・本番設定は未実装であり、ログイン成功を社員・施設権限の証明と扱わない。実装範囲と検証結果はdocs/LOCAL_IDENTITY.mdとdocs/LOCAL_VALIDATION.mdを参照する。
+`/health`はDB readinessと分離したliveness、`/version`は公開release定数だけとする。JSON Schemaによる出力制約とSwift Codableの検証範囲を混同しない。HTTP serverの成功/エラー応答、PORT境界値、SIGTERM終了を実HTTP・processテストで確認する。DB pool・接続診断と、ローカルPasskey登録・署名/UV検証・session HTTPは実装済み。ローカル施設HTTPの投影は実装済み（docs/LOCAL_FACILITY_HTTP.md）、Workspace所属認可・本番設定は未実装であり、ログイン成功を社員・施設権限の証明と扱わない。実装範囲と検証結果はdocs/LOCAL_IDENTITY.mdとdocs/LOCAL_VALIDATION.mdを参照する。
 
 2026-11-01の最新ユーザー指示により、ローカル実装を継続し、適切な単位でpush/PRを作成する。GitHub Codexへの指摘対応・返信・再レビューで指摘なしと必須CI成功を確認後にmergeできる。以前のlocal-only制限はこの指示で更新された。ローカルコンテナはApple `container`を使い、Docker・Docker Composeを使用しない。既存GitHub workflowのSwift containerジョブをローカルで代替実行しない。bind既定値は`127.0.0.1`とし、コンテナ内の`0.0.0.0`は明示設定、ホストへの公開はloopbackのみとする。
 
@@ -110,7 +110,7 @@ db/schema.sqlを正本とし、Atlas Community1.3.0でforward-only migrationを�
 
 ## 施設アクセスとchallenge
 
-VerifiedSubjectに公開initializer/Decodable/無検証factoryを追加しない。生成はSessionStore内の署名・UV検証済みログインtransactionによる発行、または有効sessionのDB照合を経た経路に限定する。施設の業務HTTPへの接続は未実装であり、追加時はSecurity Reviewと実DBの施設境界検証を伴う。全施設操作SQLでmembership/role/facilityを同時検査し、失効後の次statementで拒否する。Workspace確認なしにstaff認可完成と扱わない。
+VerifiedSubjectに公開initializer/Decodable/無検証factoryを追加しない。生成はSessionStore内の署名・UV検証済みログインtransactionによる発行、または有効sessionのDB照合を経た経路に限定する。ローカル施設HTTPはstaff origin/sessionと同statement membership/role/session再照合を必須とする。Workspace社員確認済みとは扱わない。施設認可変更時はSecurity Reviewと実DBの施設境界検証を伴う。全施設操作SQLでmembership/role/facilityを同時検査し、失効後の次statementで拒否する。Workspace確認なしにstaff認可完成と扱わない。
 
 PasskeyFlowBindingはhashだけDB保存、値/nonceをlog・test失敗のmacro展開へ出さない。consumeはlock取得後のDB時刻、exact RP/origin/purpose、未消費状態を同statementで検査し、署名失敗時も復活させない。consumeを認証成功の根拠にしない。ユーザー許可はローカル仮想認証器鍵/専用token生成に限定し、外部APIキーや本番用鍵へ拡大しない。replay DBを使うSwift testsとAtlas resetを同時実行しない。
 

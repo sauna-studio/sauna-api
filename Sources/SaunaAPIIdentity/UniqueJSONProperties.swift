@@ -80,12 +80,13 @@ private struct UniqueJSONProperties {
     }
 }
 
-package enum AuthenticationTransportBody { case empty, finish, revocationOptions }
+package enum AuthenticationTransportBody { case empty, finish, revocationOptions, facilityRename }
 
 package func validateAuthenticationTransportJSON(_ data: Data, shape: AuthenticationTransportBody) throws {
     try rejectDuplicateJSONProperties(data, maximumBytes: 131_072)
     let allowed: Set<String>
     switch shape {
+    case .facilityRename: allowed = ["name"]
     case .empty: allowed = []
     case .finish: allowed = ["challengeID", "credentialJSON"]
     case .revocationOptions: allowed = ["credentialID"]

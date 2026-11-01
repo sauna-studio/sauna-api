@@ -40,19 +40,34 @@ public struct FacilityStore: Sendable {
     private let executor: Executor
     private let subject: VerifiedSubject
     private let facilityID: UUID
+    private let sessionHash: Data?
+    private let sessionOrigin: String?
 
     public init(client: PostgresClient, subject: VerifiedSubject, facilityID: UUID) {
         self.executor = .client(client)
         self.subject = subject
         self.facilityID = facilityID
+        self.sessionHash = nil
+        self.sessionOrigin = nil
     }
 
-    // Only the module's tests inject a transaction-pinned connection. It is not a
-    // public factory that can let a borrowed pool connection escape its lifetime.
+    // Database-layer fixture tests use this unbound transaction executor; HTTP
+    // cannot use it because FacilityService requires the session-bound overload.
     init(connection: PostgresConnection, subject: VerifiedSubject, facilityID: UUID) {
         self.executor = .connection(connection)
         self.subject = subject
         self.facilityID = facilityID
+        self.sessionHash = nil
+        self.sessionOrigin = nil
+    }
+
+    init(connection: PostgresConnection, subject: VerifiedSubject, facilityID: UUID,
+         sessionToken: AuthSessionToken, relyingParty: LocalPasskeyRelyingParty) {
+        self.executor = .connection(connection)
+        self.subject = subject
+        self.facilityID = facilityID
+        self.sessionHash = sessionToken.digest
+        self.sessionOrigin = relyingParty.origin
     }
 
     public func listProducts(limit: Int = 100) async throws -> [FacilityProduct] {
@@ -66,6 +81,14 @@ public struct FacilityStore: Sendable {
                 LEFT JOIN public.products AS p ON p.facility_id = m.facility_id
                 WHERE m.facility_id = \(facilityID) AND m.user_id = \(subject.userID)
                   AND m.status = 'active' AND m.role IN ('owner', 'manager', 'staff')
+                  AND (\(sessionHash == nil) OR EXISTS (
+                    SELECT 1 FROM public.auth_sessions AS s
+                    JOIN public.passkey_credentials AS c ON c.id=s.credential_id AND c.user_id=s.user_id
+                    WHERE s.token_hash=\(sessionHash) AND s.origin=\(sessionOrigin)
+                      AND s.user_id=\(subject.userID) AND s.revoked_at IS NULL
+                      AND s.created_at<=clock_timestamp() AND s.expires_at>clock_timestamp()
+                      AND c.revoked_at IS NULL
+                  ))
                 ORDER BY p.id LIMIT \(limit)
                 """)
             var authorized = false
@@ -89,6 +112,14 @@ public struct FacilityStore: Sendable {
                     WHERE m.facility_id = p.facility_id AND m.user_id = \(subject.userID)
                       AND m.status = 'active' AND m.role IN ('owner', 'manager', 'staff')
                   )
+                  AND (\(sessionHash == nil) OR EXISTS (
+                    SELECT 1 FROM public.auth_sessions AS s
+                    JOIN public.passkey_credentials AS c ON c.id=s.credential_id AND c.user_id=s.user_id
+                    WHERE s.token_hash=\(sessionHash) AND s.origin=\(sessionOrigin)
+                      AND s.user_id=\(subject.userID) AND s.revoked_at IS NULL
+                      AND s.created_at<=clock_timestamp() AND s.expires_at>clock_timestamp()
+                      AND c.revoked_at IS NULL
+                  ))
                 """)
             for try await (id, name) in rows.decode((UUID, String).self) {
                 return .init(id: id, name: name)
@@ -111,6 +142,14 @@ public struct FacilityStore: Sendable {
                     WHERE m.facility_id = p.facility_id AND m.user_id = \(subject.userID)
                       AND m.status = 'active' AND m.role IN ('owner', 'manager')
                   )
+                  AND (\(sessionHash == nil) OR EXISTS (
+                    SELECT 1 FROM public.auth_sessions AS s
+                    JOIN public.passkey_credentials AS c ON c.id=s.credential_id AND c.user_id=s.user_id
+                    WHERE s.token_hash=\(sessionHash) AND s.origin=\(sessionOrigin)
+                      AND s.user_id=\(subject.userID) AND s.revoked_at IS NULL
+                      AND s.created_at<=clock_timestamp() AND s.expires_at>clock_timestamp()
+                      AND c.revoked_at IS NULL
+                  ))
                 RETURNING p.id, p.name
                 """)
             for try await (id, name) in rows.decode((UUID, String).self) {

@@ -13,6 +13,7 @@ struct AuthHTTPFailure: Error, HTTPResponseConvertible {
     case 400: title = "Bad Request"
     case 401: title = "Unauthorized"
     case 403: title = "Forbidden"
+    case 404: title = "Not Found"
     case 413: title = "Payload Too Large"
     case 429: title = "Too Many Requests"
     default: title = "Service Unavailable"
@@ -102,6 +103,9 @@ struct AuthTransportMiddleware: ServerMiddleware {
       case "http://localhost:5174": party = .staff
       default: throw AuthHTTPFailure(status: .forbidden)
       }
+      if operationID.hasPrefix("staff"), origin != "http://localhost:5174" {
+        throw AuthHTTPFailure(status: .forbidden)
+      }
       guard await limiter.allow(origin) else { throw AuthHTTPFailure(status: .tooManyRequests) }
       if let site = request.headerFields[HTTPField.Name("Sec-Fetch-Site")!], site != "same-origin",
         site != "none"
@@ -146,7 +150,8 @@ struct AuthTransportMiddleware: ServerMiddleware {
               == "application/json"
           else { throw AuthHTTPFailure(status: .badRequest) }
           do {
-            let shape: AuthenticationTransportBody = operationID == "beginPasskeyRevocation"
+            let shape: AuthenticationTransportBody = operationID == "staffRenameProduct"
+              ? .facilityRename : operationID == "beginPasskeyRevocation"
               ? .revocationOptions : (operationID.hasPrefix("finish") ? .finish : .empty)
             try validateAuthenticationTransportJSON(bytes, shape: shape)
           } catch { throw AuthHTTPFailure(status: .badRequest) }
@@ -162,7 +167,7 @@ struct AuthTransportMiddleware: ServerMiddleware {
       try Task.checkCancellation()
       var response = result.0
       if response.status.code >= 400 {
-        let allowed = [400, 401, 403, 413, 429, 503]
+        let allowed = [400, 401, 403, 404, 413, 429, 503]
         let status =
           allowed.contains(response.status.code)
           ? response.status

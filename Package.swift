@@ -73,7 +73,7 @@ let package = Package(
         .target(
             name: "SaunaAPIServer",
             dependencies: [
-                "SaunaAPIContract", "SaunaAPIIdentity",
+                "SaunaAPIContract", "SaunaAPIIdentity", "SaunaAPIDatabase",
                 .product(name: "HTTPTypes", package: "swift-http-types"),
                 .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
                 .product(name: "PostgresNIO", package: "postgres-nio"),
