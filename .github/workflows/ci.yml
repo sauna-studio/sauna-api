@@ -65,6 +65,11 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PUSH_BASE_SHA: ${{ github.event.before }}
           MANUAL_BASE_SHA: ${{ inputs.base_sha }}
+          # The checkout is shared with the job's root user; trust only this
+          # workspace for this step and its Git children, not a global wildcard.
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: safe.directory
+          GIT_CONFIG_VALUE_0: ${{ github.workspace }}
         run: |
           case "$EVENT_NAME" in
             pull_request) migration_base="$PR_BASE_SHA" ;;

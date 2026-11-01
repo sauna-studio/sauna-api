@@ -86,3 +86,6 @@ Atlas CommunityはApache2.0。pglast8.7はGPL3以降の開発検証用Python依�
 ## 独立レビュー結果
 
 独立Review Agentがfresh replay/reapply、schema一致、実drift拒否とcolumn残存、app接続の21拒否SQLを再実行し成功。guardのAST拒否ケースとPythonテストも再実行した。Security Review Agentはmain/replay両DBの6業務tableとrevision tableのadmin所有、appのDML許可/CREATE・TRUNCATE不可/revision閲覧不可/admin membershipなしをreadonly SQLで確認し、helperのtemp config・所有DB保護・secret非出力をレビューした。未解決blocking指摘なし。GitHub Codexレビュー・遠隔CIは今回未依頼であり、このローカルレビューで代替済みとは扱わない。
+
+
+GitHub job containerではcheckoutされたworkspaceと実行userのownerが異なる。migration stepにだけ`GIT_CONFIG_COUNT/KEY_0/VALUE_0`で正確な`${{ github.workspace }}`の`safe.directory`を渡す。初回pushのbase選択、Python、trusted guardの子Gitへ同じcommand-scope設定を継承し、global設定や`*`許可は作らない。peer clusterへは`env -i`で引き継がない。これはjobの共有workspaceを明示する通常のGit保護設定であり、所有権検査全体を無効にする方式ではない。公式仕様: https://git-scm.com/docs/git-config#Documentation/git-config.txt-safedirectory

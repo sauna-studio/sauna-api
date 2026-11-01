@@ -1,4 +1,9 @@
 import json
+import os
+import subprocess
+import sys
+
+import yaml
 from pathlib import Path
 import tempfile
 import unittest
@@ -87,6 +92,50 @@ class IsolatedMigrationSafetyTests(unittest.TestCase):
             # Later source edits cannot change already validated snapshot bytes.
             (root / 'db/schema.sql').write_text('CHANGED AFTER SNAPSHOT')
             self.assertEqual((staged / 'db/schema.sql').read_text(), 'CREATE TABLE fixture(id int);')
+
+    def test_job_workspace_trust_is_exact_process_scoped_and_inherited_by_guard_children(self):
+        workflow = yaml.safe_load((ci.ROOT / '.github/workflows/ci.yml').read_text())
+        steps = workflow['jobs']['migrations']['steps']
+        configured = [step for step in steps if 'GIT_CONFIG_COUNT' in step.get('env', {})]
+        self.assertEqual(len(configured), 1)
+        policy = configured[0]['env']
+        self.assertEqual(policy['GIT_CONFIG_COUNT'], '1')
+        self.assertEqual(policy['GIT_CONFIG_KEY_0'], 'safe.directory')
+        self.assertEqual(policy['GIT_CONFIG_VALUE_0'], '${{ github.workspace }}')
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            home = root / 'home'
+            home.mkdir()
+            config = home / '.gitconfig'
+            original_config = b'[user]\n    name = Synthetic Git Test\n'
+            config.write_bytes(original_config)
+            environment = {'PATH': os.environ['PATH'], 'HOME': str(home),
+                           'XDG_CONFIG_HOME': str(home / '.config'), 'GIT_CONFIG_NOSYSTEM': '1'}
+            repositories = [root / 'workspace', root / 'unrelated']
+            for repository in repositories:
+                subprocess.run(['git', 'init', '--quiet', str(repository)], env=environment, check=True, capture_output=True)
+            local_config = (repositories[0] / '.git/config').read_bytes()
+            # This upstream Git test fixture exercises the real ownership check
+            # without changing host file ownership or needing a privileged user.
+            environment['GIT_TEST_ASSUME_DIFFERENT_OWNER'] = '1'
+            def inspect(repository, env):
+                return subprocess.run(['git', '-C', str(repository), 'rev-parse', '--show-toplevel'], env=env, capture_output=True, text=True)
+            self.assertEqual(inspect(repositories[0], environment).returncode, 128)
+            scoped = dict(environment, GIT_CONFIG_COUNT=policy['GIT_CONFIG_COUNT'],
+                          GIT_CONFIG_KEY_0=policy['GIT_CONFIG_KEY_0'], GIT_CONFIG_VALUE_0=str(repositories[0]))
+            allowed = inspect(repositories[0], scoped)
+            self.assertEqual(allowed.returncode, 0)
+            self.assertEqual(allowed.stdout.strip(), str(repositories[0]))
+            scopes = subprocess.run(['git', 'config', '--show-scope', '--get-all', 'safe.directory'], env=scoped, capture_output=True, text=True, check=True)
+            self.assertEqual(scopes.stdout.strip(), 'command\t' + str(repositories[0]))
+            child = subprocess.run([sys.executable, '-I', '-c',
+                'import subprocess,sys; subprocess.run(["git","-C",sys.argv[1],"rev-parse","--show-toplevel"],check=True)', str(repositories[0])],
+                env=scoped, capture_output=True, text=True)
+            self.assertEqual(child.returncode, 0)
+            self.assertEqual(inspect(repositories[1], scoped).returncode, 128)
+            self.assertEqual(inspect(repositories[0], environment).returncode, 128)
+            self.assertEqual(config.read_bytes(), original_config)
+            self.assertEqual((repositories[0] / '.git/config').read_bytes(), local_config)
 
     def test_cleanup_refuses_foreign_label_and_never_deletes_other_containers(self):
         owner = 'owner'
