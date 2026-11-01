@@ -4,6 +4,11 @@ on:
   push:
     branches: [main, 'codex/**']
   workflow_dispatch:
+    inputs:
+      base_sha:
+        description: Trusted main-history commit for immutable migration comparison (full SHA)
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -32,3 +37,49 @@ jobs:
     uses: sauna-studio/.github/.github/workflows/reusable-swift.yml@2fa12fccae6fd62a20136a7d28b0a5b678f128d6
     permissions:
       contents: read
+
+  migrations:
+    name: PostgreSQL 18 Atlas replay
+    runs-on: ubuntu-latest
+    container:
+      image: postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Prepare isolated job tools
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends git python3 python3-venv
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Install pinned policy parser
+        run: |
+          python3 -m venv "$RUNNER_TEMP/migration-venv"
+          "$RUNNER_TEMP/migration-venv/bin/python" -m pip install pglast==8.7
+      - name: Verify immutable SQL and replay in a fresh peer-authenticated cluster
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE_SHA: ${{ github.event.before }}
+          MANUAL_BASE_SHA: ${{ inputs.base_sha }}
+          # The checkout is shared with the job's root user; trust only this
+          # workspace for this step and its Git children, not a global wildcard.
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: safe.directory
+          GIT_CONFIG_VALUE_0: ${{ github.workspace }}
+        run: |
+          case "$EVENT_NAME" in
+            pull_request) migration_base="$PR_BASE_SHA" ;;
+            push)
+              migration_base="$PUSH_BASE_SHA"
+              if [ "$migration_base" = 0000000000000000000000000000000000000000 ]; then
+                migration_base=$(git rev-parse refs/remotes/origin/main)
+              fi
+              ;;
+            workflow_dispatch) migration_base="$MANUAL_BASE_SHA" ;;
+            *) exit 1 ;;
+          esac
+          "$RUNNER_TEMP/migration-venv/bin/python" scripts/migration_ci.py --runtime ci --base "$migration_base"

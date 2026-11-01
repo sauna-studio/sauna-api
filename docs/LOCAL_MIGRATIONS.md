@@ -8,7 +8,29 @@
 
 対象: [Issue8 / B04](https://github.com/sauna-studio/sauna-api/issues/8)と[Issue9 / B05](https://github.com/sauna-studio/sauna-api/issues/9)のDB部分。Issue6/7のローカルHTTP/接続pool実装に続く作業であり、未push・未mergeの積み重ねである。
 
-## 正本と手順
+## 現在の隔離検証・CI
+
+通常の検証は新しい使い捨てclusterで行う。ローカルはApple `container`だけを使い、既存のPostgreSQLやcredential fileへ接続しない。
+
+```sh
+# origin/main等のレビュー済み履歴から、実在する完全SHAを明示する。
+migration_base=$(git rev-parse refs/remotes/origin/main)
+.venv/bin/python scripts/migration_ci.py --runtime apple --base "$migration_base"
+```
+
+入力はtrackedなschema.sql/migration SQL/atlas.sum/SQL tests/replay scriptだけを先に検証し、symlink・非regular・未追跡入力を拒否してbyte snapshotへ固定する。private fileや.gitはstageしない。candidateのatlas.sum symlinkがhost側のAtlas hashで外部fileを書き換えないよう、canary作成前にこの検査を行う。
+
+trusted baseのguard moduleをGitから取り出して実行し、既存migration SQLのbyte不変性と限定したadditive DDLを検査する。実際にAtlas hash/validateし直した履歴改変も拒否し、破壊的DDL canaryも拒否する。過去policyを同じPRで緩めて新SQLを承認する方式は採らない。policy拡張は先行する独立PRでレビューする。workflow自体の改変へ耐える保証とは区別し、通常のレビュー・必須checkを維持する。
+
+公式PostgreSQL18 imageをdigest固定し、OS postgresとして新しい一時clusterだけをinitdbする。local peer/kernel identityを使い、明示pg_identでpostgresから一時sauna_admin/app roleへ対応させる。両DB roleはNOSUPERUSER/NOCREATEDB/NOCREATEROLE/NOREPLICATION/NOBYPASSRLS。これはSQL権限分離の検証であり、同一OS userを別のOS境界に分ける方式ではない。Unix socketは0700、TCP listenは空、host HBAはreject、password/trust認証や新しい秘密値は使わない。
+
+ローカルはnetwork none、host portなし、read-only rootfs、一時tmpfs、public inputのread-only mountだけを使う。UUID名/所有labelを確認して自分のcontainerだけをcleanupする。GitHub Actionsは標準のjob containerを使い、job network自体をnoneにしているとは主張しない。DBは同じsocket-only制限を使い、postgres実行環境からGitHub/PG/Atlasの継承環境を除外する。公式Atlas Community1.3.0はOS/arch別の固定SHA256を照合してから実行する。
+
+検証内容は空DBへのapply、二度目のrevision journal byte同一、schema.sqlとの差分なし、実driftの検出とcolumn保持、明示したcanary除去後の差分なし、制限された実app接続による4つのSQL suite。fixtureはROLLBACKされる。正本・既存migrationは変更しない。ローカルでCIのLinux amd64 job全体を実行したとは扱わず、その結果はPRの実CIで確認する。
+
+CIのtrusted baseはPR base SHA、push before SHA（新規branchのall-zeroだけfetched origin/main）、manual実行の必須base_shaから選ぶ。完全SHA・commit存在・HEADのancestor・過去migrationの存在を検証し、HEAD自身への暗黙fallbackは設けない。manual入力もレビュー済みmain履歴のSHAを指定する。
+
+## 初期段階の正本と手順（履歴）
 
 `db/schema.sql`を正本とし、Atlas Communityで`db/migrations`のforward-only SQLと`atlas.sum`を生成する。生成後の過去SQLを編集せず、修正はschema更新と新しいmigrationで行う。既存開発DBやvolumeをresetしない。
 
@@ -64,3 +86,6 @@ Atlas CommunityはApache2.0。pglast8.7はGPL3以降の開発検証用Python依�
 ## 独立レビュー結果
 
 独立Review Agentがfresh replay/reapply、schema一致、実drift拒否とcolumn残存、app接続の21拒否SQLを再実行し成功。guardのAST拒否ケースとPythonテストも再実行した。Security Review Agentはmain/replay両DBの6業務tableとrevision tableのadmin所有、appのDML許可/CREATE・TRUNCATE不可/revision閲覧不可/admin membershipなしをreadonly SQLで確認し、helperのtemp config・所有DB保護・secret非出力をレビューした。未解決blocking指摘なし。GitHub Codexレビュー・遠隔CIは今回未依頼であり、このローカルレビューで代替済みとは扱わない。
+
+
+GitHub job containerではcheckoutされたworkspaceと実行userのownerが異なる。migration stepにだけ`GIT_CONFIG_COUNT/KEY_0/VALUE_0`で正確な`${{ github.workspace }}`の`safe.directory`を渡す。初回pushのbase選択、Python、trusted guardの子Gitへ同じcommand-scope設定を継承し、global設定や`*`許可は作らない。peer clusterへは`env -i`で引き継がない。これはjobの共有workspaceを明示する通常のGit保護設定であり、所有権検査全体を無効にする方式ではない。公式仕様: https://git-scm.com/docs/git-config#Documentation/git-config.txt-safedirectory

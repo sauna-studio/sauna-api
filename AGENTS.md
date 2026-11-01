@@ -106,7 +106,7 @@ API Key・秘密鍵・DB password等が必要になった時点で作業を停�
 
 ## ローカルmigration
 
-db/schema.sqlを正本とし、Atlas Community1.3.0でforward-only migrationを生成する。scripts/local_migrations.pyのguard/test/apply/verifyを実行する。過去SQLはtrusted Git baseとのbyte比較で不変とし、atlas.sum更新だけで済ませない。scratch DBは固定名・owner・commentを検証し、永続DB/volumeをresetしない。appへowner/schema CREATE/TRUNCATE/admin membershipを与えない。複合FKは越境参照の整合性だけを保証し、認証済sessionによるAPI施設認可を代替しない。詳細と未完了受入はdocs/LOCAL_MIGRATIONS.mdに記録する。
+db/schema.sqlを正本とし、Atlas Community1.3.0でforward-only migrationを生成する。通常のmigration検証は`python scripts/migration_ci.py --runtime apple --base <trusted-full-SHA>`で新しいsocket-only使い捨てclusterへ実行する。既存`local_migrations.py test`は利用中のreplay schemaをresetするため実行しない。生成/forward apply/既存DB verifyは明示した対象と許可があるときだけ既存helperを使う。過去SQLはtrusted Git baseとのbyte比較で不変とし、atlas.sum更新だけで済ませない。scratch DBは固定名・owner・commentを検証し、永続DB/volumeをresetしない。appへowner/schema CREATE/TRUNCATE/admin membershipを与えない。複合FKは越境参照の整合性だけを保証し、認証済sessionによるAPI施設認可を代替しない。詳細と未完了受入はdocs/LOCAL_MIGRATIONS.mdに記録する。
 
 ## 施設アクセスとchallenge
 
