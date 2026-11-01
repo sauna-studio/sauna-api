@@ -39,6 +39,50 @@ CREATE DATABASE sauna_ci_dev OWNER sauna_admin;
 SQL
 [[ $(psql_cmd postgres postgres -c 'SHOW listen_addresses') == '' ]]
 [[ $(psql_cmd sauna_app sauna_ci_replay -c "SELECT session_user=current_user AND session_user='sauna_app'") == t ]]
+# Extension lifecycle is separate from Atlas CE; see tracking Issue64. Never
+# accept arbitrary candidate SQL for bootstrap-superuser execution.
+bootstrap_sql=$(cat "$run_dir/prerequisites-bootstrap.sql")
+verify_sql=$(cat "$run_dir/prerequisites-verify.sql")
+for database in sauna_ci_replay sauna_ci_dev; do
+    psql_cmd postgres "$database" --command="SET statement_timeout='10s';
+$bootstrap_sql" > "$run_dir/prerequisites.log" 2>&1
+    [[ $(psql_cmd sauna_admin "$database" --command="$verify_sql") == 1 ]]
+done
+# These negative states exist only in this fresh, credential-free cluster.
+psql_cmd postgres postgres -c 'CREATE DATABASE sauna_ci_prereq_probe OWNER sauna_admin' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 0 ]]
+psql_cmd postgres sauna_ci_prereq_probe -c "CREATE SCHEMA extensions AUTHORIZATION postgres; CREATE EXTENSION btree_gist WITH SCHEMA extensions VERSION '1.7'; GRANT USAGE ON SCHEMA extensions TO sauna_admin,sauna_app;" > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 0 ]]
+psql_cmd postgres sauna_ci_prereq_probe -c 'DROP EXTENSION btree_gist; DROP SCHEMA extensions;' > /dev/null
+psql_cmd postgres sauna_ci_prereq_probe --command="SET statement_timeout='10s';
+$bootstrap_sql" > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 1 ]]
+psql_cmd postgres sauna_ci_prereq_probe -c 'ALTER SCHEMA extensions RENAME TO sauna_unexpected_extensions' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 0 ]]
+psql_cmd postgres sauna_ci_prereq_probe -c 'ALTER SCHEMA sauna_unexpected_extensions RENAME TO extensions' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 1 ]]
+psql_cmd postgres postgres -c 'CREATE ROLE sauna_ci_unexpected_owner NOLOGIN' > /dev/null
+psql_cmd postgres sauna_ci_prereq_probe -c 'ALTER SCHEMA extensions OWNER TO sauna_ci_unexpected_owner' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 0 ]]
+# Changing ownership rewrites owner ACL entries, so restore explicit USAGE
+# before asserting each independent privilege canary's clean baseline.
+psql_cmd postgres sauna_ci_prereq_probe -c 'ALTER SCHEMA extensions OWNER TO postgres; GRANT USAGE ON SCHEMA extensions TO sauna_admin,sauna_app; REVOKE CREATE ON SCHEMA extensions FROM sauna_admin,sauna_app;' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 1 ]]
+psql_cmd postgres sauna_ci_prereq_probe -c 'GRANT CREATE ON SCHEMA extensions TO sauna_app' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 0 ]]
+psql_cmd postgres sauna_ci_prereq_probe -c 'REVOKE CREATE ON SCHEMA extensions FROM sauna_app' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 1 ]]
+psql_cmd postgres postgres -c 'GRANT pg_read_server_files TO sauna_app' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 0 ]]
+psql_cmd postgres postgres -c 'REVOKE pg_read_server_files FROM sauna_app' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 1 ]]
+psql_cmd postgres postgres -c 'GRANT pg_execute_server_program TO sauna_admin' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 0 ]]
+psql_cmd postgres postgres -c 'REVOKE pg_execute_server_program FROM sauna_admin' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 1 ]]
+psql_cmd postgres sauna_ci_prereq_probe -c "DROP EXTENSION btree_gist; GRANT CREATE ON SCHEMA extensions TO sauna_ci_unexpected_owner; GRANT CREATE ON DATABASE sauna_ci_prereq_probe TO sauna_ci_unexpected_owner; SET ROLE sauna_ci_unexpected_owner; CREATE EXTENSION btree_gist WITH SCHEMA extensions VERSION '1.8'; RESET ROLE; REVOKE CREATE ON SCHEMA extensions FROM sauna_ci_unexpected_owner; REVOKE CREATE ON DATABASE sauna_ci_prereq_probe FROM sauna_ci_unexpected_owner;" > /dev/null
+[[ $(psql_cmd sauna_admin sauna_ci_prereq_probe --command="$verify_sql") == 0 ]]
+printf 'PostgreSQL prerequisite missing/version/namespace/owner/privilege canaries passed\n'
 # The socket is explicit in the driver URL; no PGHOST/service/password settings
 # can redirect Atlas toward the developer's active database.
 target="postgres://sauna_admin@/sauna_ci_replay?host=$socket&sslmode=disable&search_path=public"
@@ -57,6 +101,8 @@ check_diff() {
     [[ ! -s "$run_dir/diff.sql" ]]
 }
 check_diff
+[[ $(psql_cmd sauna_admin sauna_ci_replay --command="$verify_sql") == 1 ]]
+[[ $(psql_cmd sauna_admin sauna_ci_dev --command="$verify_sql") == 1 ]]
 psql_cmd sauna_admin sauna_ci_replay -c 'ALTER TABLE public.facilities ADD COLUMN sauna_ci_drift_probe integer' > /dev/null
 # Check the actual diff result and retained column separately: a command failure
 # or a verifier that silently repairs the database must not pass this canary.
@@ -65,6 +111,17 @@ psql_cmd sauna_admin sauna_ci_replay -c 'ALTER TABLE public.facilities ADD COLUM
 grep -q sauna_ci_drift_probe "$run_dir/drift.sql"
 [[ $(psql_cmd sauna_admin sauna_ci_replay -c "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='facilities' AND column_name='sauna_ci_drift_probe'") == 1 ]]
 psql_cmd sauna_admin sauna_ci_replay -c 'ALTER TABLE public.facilities DROP COLUMN sauna_ci_drift_probe' > /dev/null
+check_diff
+# Column parity alone would not prove that Atlas CE still inspects exclusion
+# constraints after an upgrade. Detect its removal without silently repairing it.
+exclusion_definition=$(psql_cmd sauna_admin sauna_ci_replay -c "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid='public.inventory_claims'::regclass AND conname='inventory_claim_no_overlap' AND contype='x'")
+[[ -n $exclusion_definition ]]
+psql_cmd sauna_admin sauna_ci_replay -c 'ALTER TABLE public.inventory_claims DROP CONSTRAINT inventory_claim_no_overlap' > /dev/null
+"$atlas" schema diff --from "$target" --to "file://$run_dir/db/schema.sql" --dev-url "$dev" --exclude atlas_schema_revisions --format '{{ sql . }}' > "$run_dir/exclusion-drift.sql" 2> "$run_dir/exclusion-drift.log"
+[[ -s "$run_dir/exclusion-drift.sql" ]]
+grep -q inventory_claim_no_overlap "$run_dir/exclusion-drift.sql"
+[[ $(psql_cmd sauna_admin sauna_ci_replay -c "SELECT count(*) FROM pg_constraint WHERE conrelid='public.inventory_claims'::regclass AND conname='inventory_claim_no_overlap'") == 0 ]]
+psql_cmd sauna_admin sauna_ci_replay -c "ALTER TABLE public.inventory_claims ADD CONSTRAINT inventory_claim_no_overlap $exclusion_definition" > /dev/null
 check_diff
 psql_cmd sauna_admin sauna_ci_replay <<'SQL' > /dev/null
 REVOKE CREATE ON SCHEMA public FROM PUBLIC, sauna_app;
@@ -81,4 +138,6 @@ done
 [[ $count -gt 0 ]]
 # Rolled-back fixture tests cannot leave synthetic business rows behind.
 [[ $(psql_cmd sauna_admin sauna_ci_replay -c 'SELECT (SELECT count(*) FROM public.facilities)+(SELECT count(*) FROM public.users)') == 0 ]]
+[[ $(psql_cmd sauna_admin sauna_ci_replay --command="$verify_sql") == 1 ]]
+[[ $(psql_cmd sauna_admin sauna_ci_dev --command="$verify_sql") == 1 ]]
 printf 'PostgreSQL 18 peer replay passed: fresh apply, unchanged reapply journal, schema parity, retained drift detection, %s restricted-role SQL suites\n' "$count"

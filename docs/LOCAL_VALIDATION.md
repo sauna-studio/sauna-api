@@ -160,3 +160,17 @@ Issue8の最初の実CIでは、job rootとcheckout workspaceのowner差によ�
 新しいlocal_integration_db.pyは承認済みのlocal app password fileだけを同じlocal DB用途で再利用し、新しい秘密値を生成しない。rootが並行Review/Securityで、schema先頭のpsql meta-commandがOS命令になり得る問題を実行前に指摘し、credentialアクセス前のDDL AST allowlistと固定SQL prefixを追加した。秘密値なしの新VMでmeta-command拒否と外部marker不変を確認した。helperは既存55432/DB/volume/serviceへ接続せず、新しい所有UUID/labelのVMをfinally cleanupし、private copyはready後に削除する。fixtureも生成した正確なIDだけを依存順にcleanupする。
 
 公開値は商品・条件の投影だけ。Workspace社員確認、実Safari/iOS、カタログUI、本番公開、価格、在庫、営業カレンダーは未検証。COMMIT時のcancel/応答喪失やREAD COMMITTEDの進行中statementの同時失効について、完全な直列化や絶対的未変更を主張しない。新規外部API key・鍵・課金resource・本番デプロイは不要だった。
+
+## Issue17: 物理在庫と競合制約（2026-11-01）
+
+施設内のphysical resource、四kindの商品対応、割り当て/解放ledgerとtyped staff serviceを追加した。private/shared saunaとday/overnight tentが同じ実体を共有でき、GiST exclusionが時間とseatの重複をDBで拒否する。HTTP/UI、公開空き状況、顧客予約/hold、料金、実設備の設定は含まない。詳細は[LOCAL_INVENTORY.md](LOCAL_INVENTORY.md)、sauna-docs ADR0024。
+
+- Xcode27.2/Swift6.4.2で実build成功。最終の新しいApple container/PostgreSQL18によるfull Swift112定義がskipなしで成功した（server32/10.571秒、identity40/3.238秒、database35/21.071秒、contract5/0.001秒）。既存のunused dependency/fork identity警告は残る。
+- Inventoryの新規10定義には有限timestamp/Int64変換前の境界とmicrosecond非空検査4件、resource設定/施設role/CSRF、四kindの同実体競合・隣接時刻・capacity・解放、12並行service要求、直接SQLの並行INSERT/exclusion待機を含む。SQL側の待機backendを実際に観測してから相手transactionをcommitし、待機側が正確なexclusion constraint/23P01で拒否されることを確認した。
+- resource行lock待機中のbackendを観測した後、session失効・期限切れ・credential失効・membership失効・role降格・disabled変更の6条件で割り当てが拒否され、ledgerが増えないことを確認した。allocation/release両方の10秒deadlineでactive/total ledgerと既存claimが不変で、pool再利用に成功した。COMMITと同時のcancel/応答喪失まで未変更と保証するものではない。
+- 公式Atlas Community1.3.0を用いる新しいpeer-only VMでforward migrationを生成した。最終の別VMでtrusted base `c968dbfe5105ebe2b79b593ded6c774390fb82ae`から過去SQL不変・rehash攻撃/破壊的DDL拒否・fresh/reapply journal不変・schema parity・drift保持・restricted-role SQL6suiteが成功した。exclusion constraintそのものを除去したdriftも検出し、検証による自動修復がないことを確認してから所有cluster内だけで復元した。
+- 閉じた拡張manifestを秘密値アクセス前に検査し、固定SQLだけで新しいclusterへbtree_gist1.8を導入した。欠落/別version/namespace/owner/CREATE権限/危険なrole membershipを拒否する実DB canary、およびappによるschema/拡張CREATE・ALTER・DROPの拒否が成功した。Atlas CEが拡張lifecycleを管理するとは扱わず、Issue64を参照する。
+- Python53件は公式Atlas checksum検査を含めskipなし。actionlint、bash構文、diff、公式workflow lockfile生成/verifyも成功し、workflow/lockfileはbyte不変。既存55432/live DB、volume、サービスにはschema適用/reset/拡張導入を行っていない。承認済みpassword fileを同じlocal DB用途で新VMへ限定して再利用し、新しい秘密値は生成していない。
+- 独立Review/Securityを実装と並行起動した。Int64 bindのint4range overloadを明示castで固定し、実shared割り当てで検証した。lock到達前の失効だけで偽合格にならない待機観測、直接DB競合、deadline後のtotal ledgerとreleasedAtまで検査する回帰を追加した。Atlasのname CHECK表現のfalse-positive diffは等価なcanonical表現を保持し、Issue66で追跡する。過去migration編集やdiff抑制で隠していない。
+
+実施設の運用値、Cloud SQLの拡張導入、本番権限、Workspace所属、Apple実端末、inventory HTTP/UIは未検証。GitHub Actions/Codexの最新HEADと独立再実行・最終SHAのreview結果はPRに記録する。

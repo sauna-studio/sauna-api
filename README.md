@@ -12,7 +12,7 @@ Sauna Studio API — Swift / Hummingbird / PostgreSQL 18
 
 ## Verification
 
-Hummingbirdのhealth/versionに加え、ローカルPasskey登録・署名/UVログイン・session/credential管理、施設別の認可、公開商品カタログとstaffの利用条件設定を実装しています。Workspace社員確認・本番設定・実在庫/価格/予約/決済は後続Issueです。GitHubではブランチ/PR、必須CI、独立Review/Securityと最新HEADへのCodex再レビューを通して進めます。保証範囲は[ローカル認証](docs/LOCAL_IDENTITY.md)、[施設HTTP](docs/LOCAL_FACILITY_HTTP.md)、[商品カタログ](docs/LOCAL_PRODUCT_CATALOG.md)を参照してください。
+Hummingbirdのhealth/versionに加え、ローカルPasskey登録・署名/UVログイン・session/credential管理、施設別の認可、公開商品カタログとstaffの利用条件設定、typed serviceとDB制約による物理在庫基盤を実装しています。Workspace社員確認・本番設定・在庫HTTP/UI・価格・予約・決済は後続Issueです。GitHubではブランチ/PR、必須CI、独立Review/Securityと最新HEADへのCodex再レビューを通して進めます。保証範囲は[ローカル認証](docs/LOCAL_IDENTITY.md)、[施設HTTP](docs/LOCAL_FACILITY_HTTP.md)、[商品カタログ](docs/LOCAL_PRODUCT_CATALOG.md)、[在庫基盤](docs/LOCAL_INVENTORY.md)を参照してください。
 
 契約の正本は [openapi.yaml](Sources/SaunaAPIContract/openapi.yaml) です。`GET /health` はDB readinessではなくAPIのlivenessを表す固定値、`GET /version` は公開API版とアプリrelease版のみです。両方とも認証不要で、成功は`application/json`、利用不能は固定メッセージの`application/problem+json`を定義します。ソースrevision・hostname・環境・依存サービスの状態・例外詳細は返しません。契約のexamplesは実装の稼働状態や実releaseを示すものではありません。
 

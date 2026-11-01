@@ -71,6 +71,71 @@ CREATE TABLE public.product_offerings (
     )
 );
 
+-- Product conditions and physical inventory capacity are distinct authorities.
+ALTER TABLE public.product_offerings ADD CONSTRAINT product_offerings_kind_unique UNIQUE (facility_id, product_id, kind);
+CREATE TABLE public.inventory_resources (
+    facility_id uuid NOT NULL REFERENCES public.facilities(id),
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    kind text NOT NULL,
+    name text NOT NULL,
+    capacity integer NOT NULL,
+    enabled boolean NOT NULL DEFAULT false,
+    PRIMARY KEY (facility_id, id),
+    UNIQUE (facility_id, id, kind),
+    UNIQUE (facility_id, id, capacity),
+    CONSTRAINT inventory_resources_kind_valid CHECK (kind IN ('sauna','tent')),
+    -- BETWEEN leaves a false-positive Atlas CE diff; retain canonical form until sauna-api#66 is resolved.
+    CONSTRAINT inventory_resources_name_valid CHECK (((length(name) >= 1) AND (length(name) <= 200)) AND (length(btrim(name)) > 0)),
+    CONSTRAINT inventory_resources_capacity_valid CHECK (capacity > 0)
+);
+CREATE TABLE public.inventory_product_resources (
+    facility_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    product_kind text NOT NULL,
+    resource_id uuid NOT NULL,
+    resource_kind text NOT NULL,
+    PRIMARY KEY (facility_id, product_id, resource_id),
+    UNIQUE (facility_id, product_id, resource_id, product_kind),
+    CONSTRAINT inventory_product_offering_fk FOREIGN KEY (facility_id,product_id,product_kind) REFERENCES public.product_offerings(facility_id,product_id,kind),
+    CONSTRAINT inventory_product_resource_fk FOREIGN KEY (facility_id,resource_id,resource_kind) REFERENCES public.inventory_resources(facility_id,id,kind),
+    CONSTRAINT inventory_product_resource_kind_valid CHECK (
+        (product_kind IN ('private_sauna','shared_sauna') AND resource_kind='sauna') OR
+        (product_kind IN ('day_tent','overnight_tent') AND resource_kind='tent')
+    )
+);
+CREATE TABLE public.inventory_claims (
+    facility_id uuid NOT NULL,
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    product_id uuid NOT NULL,
+    product_kind text NOT NULL,
+    resource_id uuid NOT NULL,
+    resource_capacity integer NOT NULL,
+    starts_at timestamptz NOT NULL,
+    ends_at timestamptz NOT NULL,
+    seat_slots int4range NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    released_at timestamptz,
+    PRIMARY KEY (facility_id, id),
+    CONSTRAINT inventory_claim_mapping_fk FOREIGN KEY (facility_id,product_id,resource_id,product_kind) REFERENCES public.inventory_product_resources(facility_id,product_id,resource_id,product_kind),
+    CONSTRAINT inventory_claim_capacity_fk FOREIGN KEY (facility_id,resource_id,resource_capacity) REFERENCES public.inventory_resources(facility_id,id,capacity),
+    CONSTRAINT inventory_claim_period_valid CHECK (isfinite(starts_at) AND isfinite(ends_at) AND starts_at < ends_at),
+    CONSTRAINT inventory_claim_seats_valid CHECK (
+        NOT isempty(seat_slots) AND (
+            (product_kind='shared_sauna' AND NOT lower_inf(seat_slots) AND NOT upper_inf(seat_slots)
+             AND lower(seat_slots)>=0 AND upper(seat_slots)<=resource_capacity
+             AND upper(seat_slots)::bigint-lower(seat_slots)::bigint=1) OR
+            (product_kind IN ('private_sauna','day_tent','overnight_tent') AND lower_inf(seat_slots) AND upper_inf(seat_slots))
+        )
+    ),
+    CONSTRAINT inventory_claim_release_valid CHECK (isfinite(created_at) AND (released_at IS NULL OR (isfinite(released_at) AND released_at >= created_at))),
+    CONSTRAINT inventory_claim_no_overlap EXCLUDE USING gist (
+        facility_id extensions.gist_uuid_ops WITH =,
+        resource_id extensions.gist_uuid_ops WITH =,
+        tstzrange(starts_at,ends_at,'[)') WITH &&,
+        seat_slots WITH &&
+    ) WHERE (released_at IS NULL)
+);
+
 -- State transitions, price calculation, item totals, inventory holds and payment
 -- confirmation require transaction/application rules in subsequent Issues.
 CREATE TABLE public.reservations (

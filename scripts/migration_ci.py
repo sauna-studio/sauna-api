@@ -15,6 +15,8 @@ import tempfile
 import urllib.request
 import uuid
 
+import postgresql_prerequisites as prerequisites
+
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE = 'docker.io/library/postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4'
 LABEL = 'studio.sauna.migration-ci'
@@ -122,7 +124,7 @@ def verify_guard(base, host_atlas, temporary, snapshot):
 
 
 def validated_inputs():
-    selected = [ROOT / 'db/schema.sql', ROOT / 'db/migrations/atlas.sum']
+    selected = [ROOT / 'db/schema.sql', ROOT / 'db/migrations/atlas.sum', ROOT / 'db/postgresql-prerequisites.json']
     selected += sorted((ROOT / 'db/migrations').glob('*.sql'))
     selected += sorted((ROOT / 'db/tests').glob('*.sql'))
     selected += [ROOT / 'scripts/migration_replay.sh']
@@ -142,16 +144,20 @@ def validated_inputs():
             if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                 raise RuntimeError('Expected regular staged input')
             snapshot[relative.as_posix()] = stream.read()
+    prerequisites.validate_manifest(snapshot['db/postgresql-prerequisites.json'])
     return snapshot
 
 
 def stage_inputs(directory, snapshot, atlas=None):
+    prerequisites.validate_manifest(snapshot.get('db/postgresql-prerequisites.json'))
     for relative, content in snapshot.items():
         name = 'replay.sh' if relative == 'scripts/migration_replay.sh' else relative
         destination = directory / name
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(content)
         destination.chmod(0o644)
+    (directory / 'prerequisites-bootstrap.sql').write_text(prerequisites.BOOTSTRAP_SQL)
+    (directory / 'prerequisites-verify.sql').write_text(prerequisites.VERIFY_SQL)
     if atlas is not None:
         shutil.copyfile(atlas, directory / 'atlas')
         (directory / 'atlas').chmod(0o755)
