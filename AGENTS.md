@@ -125,3 +125,7 @@ credential追加・失効は既存keyのfresh署名/UVとsession/CSRFを要求�
 ## Dependabotの扱い
 
 ユーザーの2026-11-01指示により、Dependabotの失敗・通知は対応対象/作業のブロッカーとしない。sauna-api#41のupdater復旧を待たず進める。依存変更そのものは差分とlockfileをレビューし、通常のbuild/test/required checksとCodexレビュー条件を適用する。
+
+## 全Passkey喪失の回復
+
+2026-11-01のユーザー選択により、全喪失回復は既存fail-closed方針を維持し、設計・否定テストまでを今回の範囲とする。回復コードや別認証要素を生成・有効化せず、sessionだけ・別accountの正当key・Google/メール/スタッフの無審査操作でkey追加を認可しない。予備Passkey経由の既存管理と全喪失を区別し、否定テストを未提供の回復機能の完成と表現しない。背景・将来条件はsauna-docs ADR0016とAPI Issue56を参照する。
