@@ -50,6 +50,7 @@ def main():
         ('control', 'import Foundation\nimport SaunaAPIIdentity\nfunc identity(_ value: VerifiedSubject) -> UUID { value.userID }\n', None),
         ('constructor', 'import Foundation\nimport SaunaAPIIdentity\nlet subject = VerifiedSubject(userID: UUID())\n', ('initializer', 'inaccessible', 'internal')),
         ('decoding', 'import Foundation\nimport SaunaAPIIdentity\nfunc decode(_ data: Data) throws { _ = try JSONDecoder().decode(VerifiedSubject.self, from: data) }\n', ('Decodable',)),
+        ('account_bound_assertion', 'import Foundation\nimport SaunaAPIIdentity\nfunc verify(_ service: LivePasskeyVerifier, bytes: Data, stored: StoredPasskeyCredential) throws { _ = try service.verifyAccountBoundAssertion(credentialJSON: bytes, challenge: bytes, storedCredential: stored) }\n', ('inaccessible', 'internal')),
     ]
     with tempfile.TemporaryDirectory(prefix='sauna-identity-probe-') as temporary:
         for name, source, reason in probes:
@@ -61,7 +62,7 @@ def main():
                     raise RuntimeError('Public identity type control did not compile')
             elif compiled.returncode == 0 or not all(marker in compiled.stderr for marker in reason):
                 raise RuntimeError('Identity forgery was not rejected for the expected access/type reason')
-    print('External identity type access succeeds; initializer and JSON decoding are rejected')
+    print('External identity type access succeeds; initializer, JSON decoding and management-only verification are rejected')
 
 
 if __name__ == '__main__':

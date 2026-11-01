@@ -80,8 +80,16 @@ private struct UniqueJSONProperties {
     }
 }
 
-package func validateAuthenticationTransportJSON(_ data: Data, finish: Bool) throws {
+package enum AuthenticationTransportBody { case empty, finish, revocationOptions }
+
+package func validateAuthenticationTransportJSON(_ data: Data, shape: AuthenticationTransportBody) throws {
     try rejectDuplicateJSONProperties(data, maximumBytes: 131_072)
+    let allowed: Set<String>
+    switch shape {
+    case .empty: allowed = []
+    case .finish: allowed = ["challengeID", "credentialJSON"]
+    case .revocationOptions: allowed = ["credentialID"]
+    }
     guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-          Set(object.keys).isSubset(of: finish ? ["challengeID", "credentialJSON"] : []) else { throw PasskeyVerificationError.invalidInput }
+          Set(object.keys).isSubset(of: allowed) else { throw PasskeyVerificationError.invalidInput }
 }

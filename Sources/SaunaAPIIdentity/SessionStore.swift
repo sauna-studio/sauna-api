@@ -165,11 +165,13 @@ public struct SessionStore: Sendable {
   }
   private func revokeAllOperation(token: AuthSessionToken, csrfToken: String) async throws {
     try token.verifyCSRF(csrfToken)
-    let session = try await resolve(token: token)
     do {
-      _ = try await authenticationConnection(client) { connection in
-        try await authQuery(
-          AuthTypedQueries.revokeAllSessions(userID: session.subject.userID), on: connection
+      _ = try await authenticationTransaction(client) { connection in
+        let session = try await managementSession(token: token, party: relyingParty, on: connection)
+        try await lockAccountSessions(session.userID, on: connection)
+        _ = try await managementSession(token: token, party: relyingParty, on: connection)
+        return try await authQuery(
+          AuthTypedQueries.revokeAllSessions(userID: session.userID), on: connection
         ).collect()
       }
     } catch { throw authError(error) }

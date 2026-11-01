@@ -118,6 +118,10 @@ PasskeyFlowBindingはhashだけDB保存、値/nonceをlog・test失敗のmacro�
 
 ユーザー指定blindlog-api@82a13ed73fff44984e8954781d669cf8320883eaのPackage.swift/構成をAPI実装の基準にする。対応と依存/fork評価はdocs/BLINDLOG_REFERENCE.mdを更新する。自前productiontargetsは共通apiSwiftSettingsを維持し、公開型だけpublic import、欠けたmodule importを明示する。VerifiedSubjectを公開生成可能にしたり生成OpenAPIを編集してbuildを通さない。参照先のメールOTP/Cloudflare/Valkey正本をSaunaへ継承しない。依存は必要性・license・差分を確認し、採用時はrelease/exact revision+lockを固定する。
 
+## Passkey管理の境界
+
+credential追加・失効は既存keyのfresh署名/UVとsession/CSRFを要求し、intentをuser/session/RP/origin/action/target/期限へ束縛する。追加の認可と新key登録は別nonce・別消費で、検証前に独立commitして失敗時もspendを復活させない。account rowを最初にlockし、管理・login発行・全session失効を直列化する。必要なrow/unique待機後のDB時刻でsession・intent・keyを再確認し、上限10/最後key保護を同じ境界内で検証する。変更成功時は全accountsession失効→再login。複数credential・同期Passkey・実端末の数を混同せず、全喪失の本人回復やWorkspace認可が完成したとは扱わない。詳細はdocs/LOCAL_IDENTITY.mdとsauna-docs ADR0014を参照する。
+
 ## Dependabotの扱い
 
 ユーザーの2026-11-01指示により、Dependabotの失敗・通知は対応対象/作業のブロッカーとしない。sauna-api#41のupdater復旧を待たず進める。依存変更そのものは差分とlockfileをレビューし、通常のbuild/test/required checksとCodexレビュー条件を適用する。

@@ -2,7 +2,7 @@
 
 ## 実装範囲と境界
 
-`SaunaAPIIdentity`にPasskey登録、署名・User Verification検証、DB challengeとsession管理を実装している。`VerifiedSubject`は外部moduleから生成・JSON decodeできず、認証サービスだけが検証済み利用者を生成する。公開HTTPはローカル認証の7操作のみで、施設の業務HTTP、予約・決済・Workspace認可は未実装である。
+`SaunaAPIIdentity`にPasskey登録、署名・User Verification検証、DB challengeとsession管理を実装している。`VerifiedSubject`は外部moduleから生成・JSON decodeできず、認証サービスだけが検証済み利用者を生成する。公開HTTPはローカル認証・credential管理の13操作のみで、施設の業務HTTP、予約・決済・Workspace認可は未実装である。
 
 `FacilityStore`はproduct一覧・詳細・名称更新ごとに、要求facility_id、subject user_id、有効membership、許可roleを同じSQLで再検査する。staffは閲覧、manager/ownerは更新できる。権限不足と不存在は同じ固定エラーになる。施設/roleをcontextへキャッシュせず、失効や降格は反映後の次のREAD COMMITTED statementで拒否する。実行中statementと失効処理の厳密な直列化は保証しない。raw SQL app roleは全施設行のDML権限を持つため、任意userIDをtrusted subjectへ変換してはならない。
 
@@ -11,7 +11,7 @@
 RPは`localhost`、originはcustomer=`http://localhost:5173` / staff=`http://localhost:5174`に固定する。Webはlocalhostで開き、APIの接続先だけをloopback `127.0.0.1:8080`にする。production RP/originは未対応である。
 
 - 登録optionsはdiscoverable credentialとUVを必須とし、ES256/P-256、attestation noneのみを受け付ける。
-- userIDと32-byte userHandleをserverで生成し、登録intentへ対応付ける。登録は新規accountのみを作り、sessionを発行しない。既存accountへのcredential追加は未実装である。
+- userIDと32-byte userHandleをserverで生成し、登録intentへ対応付ける。登録は新規accountのみを作り、sessionを発行しない。既存accountへのcredential追加は、後述する再認証付き管理経路だけで受け付ける。
 - 登録ではcanonical id/rawId、attested credential ID、COSE key、RP hash、UP/UV、backup flags、clientData type/challenge/originを検査する。assertionは保存済み公開鍵による署名、userHandle、counter、backup eligibilityを検査する。
 - crossOrigin=trueや型不正・null、topOriginの存在、重複JSON property、対応外extension、CBOR trailing bytesを拒否する。CBORはlibraryへ渡す前にbyte数・深さ・container種類を制限する。
 - 認証ではcredential rowをlockし、counter更新とsession発行を同じtransactionで行う。sessionを作るには登録後に署名付きUV assertionが必要である。
@@ -29,6 +29,21 @@ session tokenは独立した32-byte乱数で、DBにはdigestのみを保存す�
 HTTPはexact Origin、重複cookie、JSON形式、128KiB body上限を検査し、originごとに240要求/分のローカル制限を持つ。responseはno-store、固定エラーで内部情報を返さない。SvelteKitの同一origin BFFを通す構成で、直接cross-origin CORSは公開しない。
 
 DB操作には10秒のoperation deadlineを設け、取消対象のleased connectionを閉じてからpoolへ返す。共有poolのrun taskをrequestごとに取り消さない。timeout・取消後のpool回復は実DB回帰で確認する。`LocalDatabase.withClient`の診断用lifetimeと、常駐HTTP serverのpool lifetimeは分けている。
+
+## 複数Passkeyの管理
+
+有効なsession本人のcredential一覧を返すが、COSE公開鍵や秘密鍵、他user情報は返さない。有効credential上限は10件。同期Passkeyのコピー数や物理端末数をcredential数から判断しない。
+
+- 追加は`addition/authorization/options`→既存keyの新しい署名・UVを`authorization/finish`で検証→別nonceのcreation options→新keyを`addition/finish`で検証する。2段階のchallengeと消費状態は独立し、同じaccountの既存userHandleを維持する。
+- 失効は`revocation/options`でtargetを固定し、`revocation/finish`でそのtargetとは異なる有効keyの署名・UVを要求する。最後の有効keyは失効できない。物理削除せずrevoked_atを保存する。
+- discoverable loginはuserHandleを必須とする。一方、管理assertionはserverがsessionとcredential所属からaccountを特定済みでallowCredentialsを指定するため、userHandleのnull/省略を許容する。返却されたhandleは保存済みhandleと一致が必須であり、署名・UV・RP/origin・nonce・counter等の検査は変えない。
+- すべての書込みは現在のsessionとCSRFを要求する。専用intentをuser/session digest/RP/origin/action/target/5分期限へ束縛し、匿名登録・login・別session・別操作へ転用できない。署名や新keyの検証前に独立transactionでnonceを消費・commitし、後続の失敗・取消でも復活させない。
+- account rowを最初のserialization pointにし、管理・login session発行・全session失効を直列化する。管理ではsession/proof key/target等の必要なlockを取得後のDB時刻で期限・失効を再検証する。global credential IDのINSERT待機後も検査し、期限切れなら追加をrollbackする。取消は共有poolを止めず所有leaseだけを破棄する。
+- 管理変更が成功するとaccountの全sessionを失効し、現在のcookieも削除する。新しい有効keyで再loginする。追加の認可成功だけではsessionを失効しないが、後段で元session・認可keyの有効性を再確認する。
+
+allowCredentials/excludeCredentialsはbrowser hintでありserver認可の代替ではない。request optionsはlibraryのtyped allowCredentialsを使う。creation modelに無いexcludeCredentialsだけをtyped Encodable wrapperで補い、上流採用後の削除を[Issue49](https://github.com/sauna-studio/sauna-api/issues/49)で追跡する。独自transaction取消helperは[Issue50](https://github.com/sauna-studio/sauna-api/issues/50)、cookie transportは[Issue51](https://github.com/sauna-studio/sauna-api/issues/51)で再評価する。設計はsauna-docsのADR0014に記録している。
+
+全credentialを失った本人の回復、Google/メールによる代替login、スタッフの権限だけでのkey追加は実装しない。同期Passkeyと別credentialの事前登録による備えを区別し、本人回復とApple保存契約を含むIssue13全体は未完了として残す。
 
 ## ローカル起動と検証
 
@@ -59,6 +74,6 @@ DB設定はsauna_local/sauna_atlas_replayだけを許可し、統合testはrepla
 
 ## 残る制限
 
-credential追加・削除・回復、期限切れ行cleanup、Workspace社員確認、認証済sessionからの施設HTTP認可、本番設定、分散rate limitは未実装。staff originで認証できることは社員・施設管理者の認可を意味せず、管理操作は公開していない。Issue9/10/15全体の完了とは扱わない。
+全credential喪失時の本人回復、Apple token保存契約、期限切れ行cleanup、Workspace社員確認、認証済sessionからの施設HTTP認可、本番設定、分散rate limitは未実装。staff originで認証できることは社員・施設管理者の認可を意味せず、管理操作は公開していない。Issue9/10/15全体の完了とは扱わない。
 
 ユーザーはローカル仮想認証器の一時鍵とローカルsession token生成を承認済み。実アカウント・実顧客データは使用しない。TablePro/Safari MCPは接続できておらず、実DBはPostgresNIO/psql/Atlas、build/testはSwift CLI、DBはApple containerを用いる。実Safari/iOS Passkeyは未検証。最終依存でのfull tests、ブラウザー結合、Linux/CI、GitHub Codex最新HEADの成否は別々に記録し、未実行・skip・未着を成功扱いしない。

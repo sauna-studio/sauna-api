@@ -127,6 +127,32 @@ struct PasskeyVerifierTests {
         await expectRejected { _ = try verifier.verifyAssertion(credentialJSON: other.assertion(), challenge: fixtureChallenge, storedCredential: virtual.stored()) }
     }
 
+    @Test func knownAccountAllowsAbsentHandleWhileDiscoverableLoginRequiresIt() async throws {
+        let virtual = VirtualPasskey()
+        let verifier = try LivePasskeyVerifier(origin: "http://localhost:5173")
+        let omitted = try virtual.assertion(handle: nil)
+        var object = try #require(JSONSerialization.jsonObject(with: omitted) as? [String: Any])
+        var response = try #require(object["response"] as? [String: Any])
+        response["userHandle"] = NSNull(); object["response"] = response
+        let null = try JSONSerialization.data(withJSONObject: object)
+        for credential in [omitted, null] {
+            let proof = try verifier.verifyAccountBoundAssertion(credentialJSON: credential, challenge: fixtureChallenge, storedCredential: virtual.stored())
+            let sameID = proof.credentialID == virtual.id
+            #expect(sameID)
+            await expectRejected { _ = try verifier.verifyAssertion(credentialJSON: credential, challenge: fixtureChallenge, storedCredential: virtual.stored()) }
+        }
+        for handle in [Data(), Data(repeating: 0x71, count: 32)] {
+            await expectRejected { _ = try verifier.verifyAccountBoundAssertion(credentialJSON: virtual.assertion(handle: handle), challenge: fixtureChallenge, storedCredential: virtual.stored()) }
+        }
+        for malformed in ["*not-base64url*" as Any, 123 as Any] {
+            response["userHandle"] = malformed; object["response"] = response
+            let credential = try JSONSerialization.data(withJSONObject: object)
+            await expectRejected { _ = try verifier.verifyAccountBoundAssertion(credentialJSON: credential, challenge: fixtureChallenge, storedCredential: virtual.stored()) }
+        }
+        await expectRejected { _ = try verifier.verifyAccountBoundAssertion(credentialJSON: virtual.assertion(handle: nil, tamperSignature: true), challenge: fixtureChallenge, storedCredential: virtual.stored()) }
+        await expectRejected { _ = try verifier.verifyAccountBoundAssertion(credentialJSON: virtual.assertion(flags: 0x01, handle: nil), challenge: fixtureChallenge, storedCredential: virtual.stored()) }
+    }
+
     @Test func backupFlagsAndCounterPolicyAreVerified() async throws {
         let virtual = VirtualPasskey()
         let verifier = try LivePasskeyVerifier(origin: "http://localhost:5173")

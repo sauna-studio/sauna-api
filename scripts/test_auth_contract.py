@@ -11,7 +11,7 @@ class AuthenticationContractTests(unittest.TestCase):
                 continue
             for method in methods.values():
                 csrf = next(p for p in method['parameters'] if p['name'] == 'X-Sauna-CSRF')
-                self.assertEqual(csrf['required'], path in {'/auth/logout', '/auth/sessions/revoke-all'}, path)
+                self.assertEqual(csrf['required'], path in {'/auth/logout', '/auth/sessions/revoke-all'} or '/addition/' in path or '/revocation/' in path, path)
                 origin = next(p for p in method['parameters'] if p['name'] == 'Origin')
                 self.assertTrue(origin['required'])
         for path in ['/auth/session', '/auth/logout', '/auth/sessions/revoke-all']:
@@ -24,3 +24,12 @@ class AuthenticationContractTests(unittest.TestCase):
         self.assertEqual(set(schemas['AuthenticationProblem']['properties']['title']['enum']), {'Bad Request', 'Unauthorized', 'Forbidden', 'Payload Too Large', 'Too Many Requests', 'Service Unavailable'})
         self.assertNotIn('token', schemas['AuthSession']['properties'])
         self.assertEqual(schemas['PasskeyFinishRequest']['properties']['credentialJSON']['maxLength'], 65536)
+
+    def test_credential_management_is_session_scoped_and_secrets_are_not_listed(self):
+        document = yaml.safe_load((Path(__file__).parents[1] / 'Sources/SaunaAPIContract/openapi.yaml').read_text())
+        for path in document['paths']:
+            if path == '/auth/passkeys' or '/addition/' in path or '/revocation/' in path:
+                operation = next(iter(document['paths'][path].values()))
+                self.assertEqual(operation['security'], [{'CustomerSession': []}, {'StaffSession': []}])
+        fields = document['components']['schemas']['ManagedPasskey']['properties']
+        self.assertEqual(set(fields), {'credentialID', 'createdAtUnixSeconds', 'lastUsedAtUnixSeconds', 'isCurrentSessionCredential'})

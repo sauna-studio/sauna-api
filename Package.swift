@@ -91,6 +91,8 @@ let package = Package(
         .testTarget(
             name: "SaunaAPIServerTests",
             dependencies: [
+                .product(name: "Crypto", package: "swift-crypto"),
+                .product(name: "CBOR", package: "swift-cbor"),
                 "SaunaAPIContract", "SaunaAPIServer", "SaunaAPI", "SaunaAPIDatabase", "SaunaAPIIdentity",
                 .product(name: "PostgresNIO", package: "postgres-nio"),
                 .product(name: "HTTPTypes", package: "swift-http-types"),
