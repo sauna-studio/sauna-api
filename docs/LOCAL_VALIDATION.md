@@ -97,3 +97,15 @@ SPMの上流/自前PostgresNIO同一identity警告と予約済み未使用depend
 ### Passkey rebase onto merged dependency foundation
 
 PR43のmerge commit `b3aaec52aed3e4572f7e5e6b7333e657d9d8b670`へPasskey本体をrebaseした。独立Review/Securityが認証source・既存認証tests・固定lockfileのbyte不変と、共通AGENTS規則・8GiB helper・PR43回帰の保持を確認した。hostの`swift build --force-resolved-versions`と実PostgreSQL18を使う`swift test --force-resolved-versions`は成功（Server20/Identity25/Database23/Contract5、合計73件、skipなし）。Python30件、OpenAPI schema/examples、migration3filesの不変guardと実DB/schema parityも成功した。新HEADのGitHub CIとCodexレビューは別途確認し、旧HEADの合格で代用しない。
+
+### Account-bound Passkey credential management
+
+Issue53 / PR54で、本人の一覧とfresh署名・UVによる追加/失効を実装した。最終runtime source `44c4d1af28aef85b1a032baf652f22c832373b38`ではnative full tests88件（Server21/Identity39/Database23/Contract5）が実PostgreSQL18接続・skipなしで成功。fresh owned replayでAtlas4 migrationsの過去不変guard、初回/反復適用、schema parity、drift拒否とSQL58拒否（従来41+管理17）も成功した。既存local DB/volume/passwordは保持した。隔離worktreeでは既存workspaceのAtlas実binaryを明示してPython31件をskipなしで実行し、OpenAPI/examples検査も成功した。
+
+独立Reviewは最新sourceのPG/crypto24選択testsと、VerifiedSubject生成・JSON decode・管理専用verification entryの外部module拒否を実行成功。public strict verificationの同一arguments positive controlもtypecheck成功し、拒否が別のimport/type不備でないことを確認した。Securityは17 SQL拒否、両DBのapp role権限、rowlock待機中に期限が切れる旧predicateの負例とlocked CTE後clockの正例を独立実行した。
+
+実HTTP回帰で、新しい失効optionsのcredentialIDが旧empty-body validatorに拒否される接続不備を検出し、操作別の狭いbody shapeへ修正した。最新回帰は本人list、schema-valid bodyでのmissing-CSRF拒否、不正CSRF/Originの固定エラー、実署名UVの2段階追加・別key失効と204 cookie削除を通す。管理のPG回帰はcross-user/session/origin/action、認可前skip/2段階replay、認可key/session失効、上限/最後key、相互失効競合、row/unique待機後期限、取消後spend維持、並行loginを検証している。
+
+GitHub CodexのP2指摘により、W3Cの識別済みaccountに対するuserHandle null/省略を管理専用internal entryだけで許容した。返却handleの一致と署名/UV等は維持し、discoverable loginの公開entryは引き続きhandle必須。DB経路で省略、HTTP経路でnull、crypto回帰でempty/wrong/type/base64不正/誤署名/UV無しと匿名loginの拒否を確認した。対応commit・検証結果をreview threadへ返信し、新しいreview roundを依頼している。
+
+最新native API+Bun production BFF+Chromium/CDPの2authenticator検証もcustomer/staff各2caseが成功した。追加後の再login、別keyによる失効、最後key保護と跨profileの全session失効を確認し、鍵/tokenのexportやtrace/video/screenshot/HARは生成していない。Apple-container/Linux releaseと最新HEADのGitHub CI/Codexは[PR54](https://github.com/sauna-studio/sauna-api/pull/54)へsnapshot別の成否を記録し、旧snapshotやDB未設定skipで最新runtimeの合格を代用しない。Safari/実Apple Passkey・全credential喪失の本人回復・Apple保存契約・Workspace/本番設定は未検証/未実装のままであり、Issue13全体は閉じない。
