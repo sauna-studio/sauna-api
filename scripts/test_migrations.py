@@ -73,6 +73,19 @@ class MigrationPolicyTests(unittest.TestCase):
                     db.query('SELECT 1', **kwargs)
             command.assert_not_called()
 
+    def test_forward_apply_grants_cover_schema_tables_without_ddl_privileges(self):
+        tables = {statement.stmt.relation.relname for statement in migrations.parse_sql((migrations.ROOT / 'db/schema.sql').read_text())
+                  if type(statement.stmt).__name__ == 'CreateStmt'}
+        self.assertEqual(set(migrations.TABLES), tables)
+        with patch.object(db, 'configure_role'), patch.object(db, 'query') as query:
+            migrations.grant_app()
+        sql = query.call_args.args[0]
+        for table in tables:
+            self.assertIn('public.' + table, sql)
+        self.assertIn('GRANT SELECT, INSERT, UPDATE, DELETE ON', sql)
+        self.assertNotIn('GRANT CREATE', sql)
+        self.assertNotIn('TRUNCATE', sql)
+
     def test_password_file_shell_keeps_pgpassfile_name(self):
         with patch.object(db, 'owned'), patch.object(db, 'command', return_value='1') as command:
             db.query('SELECT 1', database='sauna_atlas_replay', role='app')

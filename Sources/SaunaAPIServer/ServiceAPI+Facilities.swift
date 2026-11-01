@@ -5,14 +5,14 @@ import SaunaAPIIdentity
 public import SaunaAPIContract
 
 extension ServiceAPI {
-    private func facilityService() throws -> (FacilityService, AuthRequestContext) {
+    func facilityService() throws -> (FacilityService, AuthRequestContext) {
         guard let client = authenticationClient else { throw AuthenticationError.unavailable }
         guard let context = AuthRequestContext.current, context.profile == "staff" else {
             throw AuthHTTPFailure(status: .forbidden)
         }
         return (.init(client: client, token: try context.token(), relyingParty: context.relyingParty), context)
     }
-    private func facilityID(_ raw: String) throws -> UUID {
+    func facilityID(_ raw: String) throws -> UUID {
         guard let id = UUID(uuidString: raw) else { throw FacilityStoreError.invalidInput }
         return id
     }
@@ -45,7 +45,7 @@ extension ServiceAPI {
     }
 }
 
-private func facilityHTTPError(_ error: any Error) -> any Error {
+func facilityHTTPError(_ error: any Error) -> any Error {
     if error is CancellationError || Task.isCancelled { return CancellationError() }
     if let failure = error as? AuthHTTPFailure { return failure }
     if let error = error as? FacilityStoreError {
