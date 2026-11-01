@@ -36,6 +36,7 @@ DB操作には10秒のoperation deadlineを設け、取消対象のleased connec
 
 - 追加は`addition/authorization/options`→既存keyの新しい署名・UVを`authorization/finish`で検証→別nonceのcreation options→新keyを`addition/finish`で検証する。2段階のchallengeと消費状態は独立し、同じaccountの既存userHandleを維持する。
 - 失効は`revocation/options`でtargetを固定し、`revocation/finish`でそのtargetとは異なる有効keyの署名・UVを要求する。最後の有効keyは失効できない。物理削除せずrevoked_atを保存する。
+- discoverable loginはuserHandleを必須とする。一方、管理assertionはserverがsessionとcredential所属からaccountを特定済みでallowCredentialsを指定するため、userHandleのnull/省略を許容する。返却されたhandleは保存済みhandleと一致が必須であり、署名・UV・RP/origin・nonce・counter等の検査は変えない。
 - すべての書込みは現在のsessionとCSRFを要求する。専用intentをuser/session digest/RP/origin/action/target/5分期限へ束縛し、匿名登録・login・別session・別操作へ転用できない。署名や新keyの検証前に独立transactionでnonceを消費・commitし、後続の失敗・取消でも復活させない。
 - account rowを最初のserialization pointにし、管理・login session発行・全session失効を直列化する。管理ではsession/proof key/target等の必要なlockを取得後のDB時刻で期限・失効を再検証する。global credential IDのINSERT待機後も検査し、期限切れなら追加をrollbackする。取消は共有poolを止めず所有leaseだけを破棄する。
 - 管理変更が成功するとaccountの全sessionを失効し、現在のcookieも削除する。新しい有効keyで再loginする。追加の認可成功だけではsessionを失効しないが、後段で元session・認可keyの有効性を再確認する。

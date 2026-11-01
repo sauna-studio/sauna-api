@@ -124,6 +124,16 @@ public struct LivePasskeyVerifier: PasskeyVerifying {
     }
 
     public func verifyAssertion(credentialJSON: Data, challenge: Data, storedCredential: StoredPasskeyCredential) throws -> VerifiedPasskeyAssertion {
+        try verifyAssertion(credentialJSON: credentialJSON, challenge: challenge, storedCredential: storedCredential, requiresUserHandle: true)
+    }
+
+    // The management service has already bound this credential to the signed-in
+    // account. WebAuthn 7.2 permits absent handles only in that identified case.
+    func verifyAccountBoundAssertion(credentialJSON: Data, challenge: Data, storedCredential: StoredPasskeyCredential) throws -> VerifiedPasskeyAssertion {
+        try verifyAssertion(credentialJSON: credentialJSON, challenge: challenge, storedCredential: storedCredential, requiresUserHandle: false)
+    }
+
+    private func verifyAssertion(credentialJSON: Data, challenge: Data, storedCredential: StoredPasskeyCredential, requiresUserHandle: Bool) throws -> VerifiedPasskeyAssertion {
         do {
             let id = try credentialEnvelope(credentialJSON, challenge: challenge)
             guard id == storedCredential.credentialID, (1...64).contains(storedCredential.userHandle.count) else { throw PasskeyVerificationError.rejected }
@@ -131,9 +141,10 @@ public struct LivePasskeyVerifier: PasskeyVerifying {
             let raw = try JSONDecoder().decode(AuthenticationCredential.self, from: credentialJSON)
             try verifyClientData(Data(raw.response.clientDataJSON), challenge: challenge, type: "webauthn.get")
             guard raw.response.authenticatorData.count == 37,
-                  let userHandle = raw.response.userHandle,
-                  Data(userHandle) == storedCredential.userHandle,
                   raw.response.attestationObject == nil else { throw PasskeyVerificationError.rejected }
+            if let userHandle = raw.response.userHandle {
+                guard Data(userHandle) == storedCredential.userHandle else { throw PasskeyVerificationError.rejected }
+            } else if requiresUserHandle { throw PasskeyVerificationError.rejected }
             let flags = raw.response.authenticatorData[32]
             try validateFlags(flags, registration: false)
             guard (flags & 0x08 != 0) == storedCredential.backupEligible else { throw PasskeyVerificationError.rejected }

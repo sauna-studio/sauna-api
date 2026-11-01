@@ -19,11 +19,11 @@ private struct HTTPVirtualPasskey: Sendable {
   private func client(_ nonce: Data, type: String) throws -> Data {
     try JSONSerialization.data(withJSONObject: ["type": type, "challenge": authEncode(nonce), "origin": "http://localhost:5173", "crossOrigin": false])
   }
-  func assertion(_ nonce: Data, handle: Data) throws -> Data {
+  func assertion(_ nonce: Data, handle: Data, returnHandle: Bool = true) throws -> Data {
     let client = try client(nonce, type: "webauthn.get")
     let auth = Data(SHA256.hash(data: Data("localhost".utf8))) + Data([0x05, 0, 0, 0, 0])
     let signature = try key.signature(for: auth + Data(SHA256.hash(data: client))).derRepresentation
-    return try JSONSerialization.data(withJSONObject: ["id": authEncode(id), "rawId": authEncode(id), "type": "public-key", "clientExtensionResults": [:], "response": ["clientDataJSON": authEncode(client), "authenticatorData": authEncode(auth), "signature": authEncode(signature), "userHandle": authEncode(handle)]])
+    return try JSONSerialization.data(withJSONObject: ["id": authEncode(id), "rawId": authEncode(id), "type": "public-key", "clientExtensionResults": [:], "response": ["clientDataJSON": authEncode(client), "authenticatorData": authEncode(auth), "signature": authEncode(signature), "userHandle": returnHandle ? authEncode(handle) as Any : NSNull()]])
   }
   func registration(_ nonce: Data) throws -> Data {
     let client = try client(nonce, type: "webauthn.create")
@@ -121,7 +121,7 @@ struct PasskeyManagementHTTPTests {
             return try JSONDecoder().decode(HTTPManagementOptions.self, from: Data(response.body.readableBytesView))
           }
           let creation = try await client.execute(uri: paths[1], method: .post, headers: headers,
-            body: .init(string: stepUp.finish(first.assertion(stepUp.nonce, handle: handle)))) { response in
+            body: .init(string: stepUp.finish(first.assertion(stepUp.nonce, handle: handle, returnHandle: false)))) { response in
             #expect(response.status == .ok)
             return try JSONDecoder().decode(HTTPManagementOptions.self, from: Data(response.body.readableBytesView))
           }
@@ -140,7 +140,7 @@ struct PasskeyManagementHTTPTests {
             return try JSONDecoder().decode(HTTPManagementOptions.self, from: Data(response.body.readableBytesView))
           }
           try await client.execute(uri: paths[4], method: .post, headers: fresh,
-            body: .init(string: removal.finish(second.assertion(removal.nonce, handle: handle)))) { response in
+            body: .init(string: removal.finish(second.assertion(removal.nonce, handle: handle, returnHandle: false)))) { response in
             #expect(response.status == .noContent)
             let cleared = response.headers[.setCookie]?.contains("Max-Age=0") == true
             #expect(cleared)

@@ -13,7 +13,7 @@ private func manager(_ client: PostgresClient, party: LocalPasskeyRelyingParty =
 private func authorize(_ service: PasskeyManagementService, fixture: RegisteredFixture, grant: SessionGrant) async throws -> PasskeyOptions {
   let options = try await service.beginAddition(token: grant.token, csrfToken: grant.session.csrfToken)
   let creation = try await service.authorizeAddition(challengeID: options.challengeID,
-    credentialJSON: fixture.key.assertion(challenge: nonce(options), counter: 0, handle: fixture.handle),
+    credentialJSON: fixture.key.assertion(challenge: nonce(options), counter: 0, handle: nil),
     token: grant.token, csrfToken: grant.session.csrfToken)
   let object = try #require(JSONSerialization.jsonObject(with: creation.optionsJSON) as? [String: Any])
   let rp = try #require(object["rp"] as? [String: String])
@@ -80,7 +80,7 @@ struct PasskeyManagementTests {
       #expect(currentCount == 1)
       let removal = try await service.beginRevocation(credentialID: authEncode(first.key.id), token: grant.token, csrfToken: grant.session.csrfToken)
       try await service.finishRevocation(challengeID: removal.challengeID,
-        credentialJSON: second.key.assertion(challenge: nonce(removal), counter: 0, handle: first.handle),
+        credentialJSON: second.key.assertion(challenge: nonce(removal), counter: 0, handle: nil),
         token: grant.token, csrfToken: grant.session.csrfToken)
       await rejected { _ = try await sessions.resolve(token: grant.token) }
       await rejected { _ = try await signedLogin(first, service: login, records: records, counter: 0) }

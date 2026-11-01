@@ -238,7 +238,7 @@ public struct PasskeyManagementService: Sendable {
       """, on: connection)
     for try await (handle, key, count, backup) in rows.decode((Data, Data, Int64, Bool).self) {
       guard let counter = UInt32(exactly: count) else { throw AuthenticationError.rejected }
-      let proof = try verifier.verifyAssertion(credentialJSON: data, challenge: intent.challenge, storedCredential: .init(credentialID: id, userHandle: handle, publicKeyCOSE: key, signCount: counter, backupEligible: backup))
+      let proof = try verifier.verifyAccountBoundAssertion(credentialJSON: data, challenge: intent.challenge, storedCredential: .init(credentialID: id, userHandle: handle, publicKeyCOSE: key, signCount: counter, backupEligible: backup))
       _ = try await authQuery("UPDATE public.passkey_credentials SET sign_count=\(Int64(proof.newSignCount)),is_backed_up=\(proof.isBackedUp),last_used_at=clock_timestamp() WHERE id=\(id) AND user_id=\(intent.userID)", on: connection).collect()
       return proof
     }
