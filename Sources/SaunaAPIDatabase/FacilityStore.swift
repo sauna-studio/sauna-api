@@ -95,7 +95,7 @@ public struct FacilityStore: Sendable {
             var products: [FacilityProduct] = []
             for try await (id, name) in rows.decode((UUID?, String?).self) {
                 authorized = true
-                if let id, let name { products.append(.init(id: id, name: name)) }
+                if let id, let name { products.append(try productResponse(id: id, name: name)) }
             }
             guard authorized else { throw FacilityStoreError.notAvailable }
             return products
@@ -122,13 +122,14 @@ public struct FacilityStore: Sendable {
                   ))
                 """)
             for try await (id, name) in rows.decode((UUID, String).self) {
-                return .init(id: id, name: name)
+                return try productResponse(id: id, name: name)
             }
             throw FacilityStoreError.notAvailable
         } catch { throw mapped(error) }
     }
 
     public func renameProduct(id: UUID, name: String) async throws -> FacilityProduct {
+        guard name.unicodeScalars.count <= 200 else { throw FacilityStoreError.invalidInput }
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, name.unicodeScalars.count <= 200, !name.contains("\0") else {
             throw FacilityStoreError.invalidInput
@@ -153,10 +154,15 @@ public struct FacilityStore: Sendable {
                 RETURNING p.id, p.name
                 """)
             for try await (id, name) in rows.decode((UUID, String).self) {
-                return .init(id: id, name: name)
+                return try productResponse(id: id, name: name)
             }
             throw FacilityStoreError.notAvailable
         } catch { throw mapped(error) }
+    }
+
+    private func productResponse(id: UUID, name: String) throws -> FacilityProduct {
+        try validateProductResponseName(name)
+        return .init(id: id, name: name)
     }
 
     private func query(_ query: PostgresQuery) async throws -> PostgresRowSequence {
