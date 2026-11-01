@@ -145,3 +145,18 @@ READ COMMITTEDのstatement snapshotは、失効と進行中更新の全順序化
 
 
 Issue8の最初の実CIでは、job rootとcheckout workspaceのowner差によりGitが`dubious ownership`で拒否し、Atlas実行前に失敗した。migration step限定の正確なworkspace `safe.directory`をGitの環境command scopeで設定する恒久的なjob設定へ修正した。実Gitの上流test fixtureで所有権拒否を再現し、対象workspaceだけ許可、別repoは拒否、Python `-I`の子Gitへ継承、step環境なしでは再拒否、global/local設定file不変を回帰検証した。hostのowner/global設定変更は行っていない。修正後のPython39件はskipなし、actionlint、公式lockfile再生成/verify、diff検査が成功した。独立Reviewは新しいApple container内の実際にownerが異なる二repoでも同じ許可/拒否を確認した。遠隔の修正後CI成功はPRで別途確認する。
+
+## Issue16: 四区分の商品カタログと利用条件（2026-11-01）
+
+公開catalogはproducts.published=trueと設定済みproduct_offeringsに限定し、staffは現在の施設membership/sessionで公開状態を絞る。条件と公開flagをmanager/ownerだけがCSRF付きで原子的に設定できる。定員・利用分数・泊数のkind-specific条件はSwiftとDBの両方で検証する。価格・実在庫・予約枠・施設営業/閉鎖の正本をこのmetadataから推定しない。詳細は[LOCAL_PRODUCT_CATALOG.md](LOCAL_PRODUCT_CATALOG.md)。
+
+- Xcode27.2/Swift6.4.2で`swift build --force-resolved-versions`成功。新schemaの使い捨てPostgreSQL18/55433に対する最終full Swift101件成功（server31、identity40、database25、contract5）。PG testsはskipなし。private/shared sauna・day/overnight tentの四種類、二施設の同一商品UUID、draft/未設定/欠落、strict query/JSON、role/CSRF、同statementのsession/credential/membership失効、条件/公開の原子性、10秒blocked更新のrollback/pool再利用を含む。
+- 独立Reviewは別cache/別の新しいVMで新規7＋既存施設HTTP5の計12定義を実行して成功した。四kindのparameter casesも成功。最終のwire境界テストとGitHubの最新HEAD結果はPRで記録する。
+- 公式Atlas Community1.3.0で新しいpeer-only VMから`20261101063651_product_offerings.sql`を生成し、過去SQLを変更せずatlas.sumを更新した。別の新しいVMでtrusted history/破壊的DDL canary、fresh/reapply journal不変、schema一致、drift保持、restricted app接続のSQL5suiteが成功。既存dev/replay DBは使っていない。
+- Python50件はskipなしで成功。既存Atlas checksum integrationには固定digest確認済みの公式host binaryを明示した。OpenAPI3.1と4既存response examples、actionlint、公式workflow lockfile provenance verify、diff検査が成功。新しいworkflow依存やpackage更新はない。
+- 既存name CHECKがbtrim(name)だけを200文字に制限し、raw nameは201文字以上になり得る点を検出した。新catalog projectionはwire長とnonblankを検査し、無効な構成を固定503で拒否する。自分のsynthetic rowを200文字＋spaceにした実HTTP回帰で、一覧/詳細が不正なwireや内部値を返さないことを確認した。既存データや過去制約を変更していない。
+- 新tableを既存forward apply helperの明示DML grantに追加し、正本schemaとのgrant対象一致とCREATE/TRUNCATEを付与しない回帰を追加した。helperを既存DBへ実行したという意味ではない。
+
+新しいlocal_integration_db.pyは承認済みのlocal app password fileだけを同じlocal DB用途で再利用し、新しい秘密値を生成しない。rootが並行Review/Securityで、schema先頭のpsql meta-commandがOS命令になり得る問題を実行前に指摘し、credentialアクセス前のDDL AST allowlistと固定SQL prefixを追加した。秘密値なしの新VMでmeta-command拒否と外部marker不変を確認した。helperは既存55432/DB/volume/serviceへ接続せず、新しい所有UUID/labelのVMをfinally cleanupし、private copyはready後に削除する。fixtureも生成した正確なIDだけを依存順にcleanupする。
+
+公開値は商品・条件の投影だけ。Workspace社員確認、実Safari/iOS、カタログUI、本番公開、価格、在庫、営業カレンダーは未検証。COMMIT時のcancel/応答喪失やREAD COMMITTEDの進行中statementの同時失効について、完全な直列化や絶対的未変更を主張しない。新規外部API key・鍵・課金resource・本番デプロイは不要だった。

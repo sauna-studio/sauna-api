@@ -1,5 +1,5 @@
 import NIOCore
-import PostgresNIO
+package import PostgresNIO
 import Synchronization
 
 /// Close only the cancelled operation's leased connection. The close future is
@@ -30,7 +30,7 @@ private final class AuthenticationLease: Sendable {
   }
 }
 
-func authenticationConnection<Value: Sendable>(
+package func authenticationConnection<Value: Sendable>(
   _ client: PostgresClient,
   operation: @escaping @concurrent @Sendable (PostgresConnection) async throws -> Value
 ) async throws -> Value {

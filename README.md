@@ -12,7 +12,7 @@ Sauna Studio API — Swift / Hummingbird / PostgreSQL 18
 
 ## Verification
 
-現在は [MVP-001 / B01](https://github.com/sauna-studio/sauna-api/issues/5) のOpenAPI契約に加え、[MVP-002 / B02](https://github.com/sauna-studio/sauna-api/issues/6) のHummingbirdサーバをローカル開発しています。DBの接続pool・診断はローカル実装済みです。業務schema/Atlas migrationのローカル基盤も実装済みです。施設アクセス層とPasskey challenge管理を追加していますが、Passkey認証・業務HTTP・外部APIは未実装で、HTTPサーバ起動にAPI Keyや秘密鍵は必要ありません。今回の変更はローカルbranchのみで、push・PR・GitHub Actionsは実行しません。
+Hummingbirdのhealth/versionに加え、ローカルPasskey登録・署名/UVログイン・session/credential管理、施設別の認可、公開商品カタログとstaffの利用条件設定を実装しています。Workspace社員確認・本番設定・実在庫/価格/予約/決済は後続Issueです。GitHubではブランチ/PR、必須CI、独立Review/Securityと最新HEADへのCodex再レビューを通して進めます。保証範囲は[ローカル認証](docs/LOCAL_IDENTITY.md)、[施設HTTP](docs/LOCAL_FACILITY_HTTP.md)、[商品カタログ](docs/LOCAL_PRODUCT_CATALOG.md)を参照してください。
 
 契約の正本は [openapi.yaml](Sources/SaunaAPIContract/openapi.yaml) です。`GET /health` はDB readinessではなくAPIのlivenessを表す固定値、`GET /version` は公開API版とアプリrelease版のみです。両方とも認証不要で、成功は`application/json`、利用不能は固定メッセージの`application/problem+json`を定義します。ソースrevision・hostname・環境・依存サービスの状態・例外詳細は返しません。契約のexamplesは実装の稼働状態や実releaseを示すものではありません。
 
@@ -29,7 +29,7 @@ swift build --force-resolved-versions
 swift test --force-resolved-versions
 ```
 
-macOS標準の`python3`が古い場合は3.11以上のPythonを明示指定してください。CIはRepository policy、OpenAPI仕様と全成功・エラーexample、内部情報を拒否する契約テスト、Linux Swift生成・build・DTOテストを実行します。実PostgreSQL18の統合テストはPGPASSWORD_FILEを明示設定したときだけ実行します。未指定時のskipをDB検証成功とは扱いません。Atlas/schemaの手順と保証範囲は[ローカルmigration](docs/LOCAL_MIGRATIONS.md)を参照してください。
+macOS標準の`python3`が古い場合は3.11以上のPythonを明示指定してください。CIはRepository policy、OpenAPI仕様と全成功・エラーexample、内部情報を拒否する契約テスト、Linux Swift生成・build・DTOテストを実行します。実PostgreSQL18のSwift統合テストは`python scripts/local_integration_db.py`で新しい使い捨てVM/loopback55433に対して実行します。既存55432/replay DBをresetせず、承認済みlocal app password fileだけを同じDB用途で再利用します。通常の`swift test`でPGPASSWORD_FILE未指定時のskipをDB検証成功とは扱いません。Atlas/schemaの手順と保証範囲は[ローカルmigration](docs/LOCAL_MIGRATIONS.md)を参照してください。
 
 ## Local HTTP server
 
@@ -57,7 +57,7 @@ curl --fail http://127.0.0.1:8080/version
 
 ## Apple container / PostgreSQL のローカル環境
 
-[ローカル環境の手順](docs/LOCAL_DEVELOPMENT.md)と[検証記録](docs/LOCAL_VALIDATION.md)を参照してください。Docker Engine/Desktop/CLI/Composeは使用しません。APIは127.0.0.1:8080、DBは127.0.0.1:55432だけに公開します。DBの承認済みローカル専用パスワードはGit除外の.local/secrets内、0700/0600で保持し、値を表示しません。
+[ローカル環境の手順](docs/LOCAL_DEVELOPMENT.md)と[検証記録](docs/LOCAL_VALIDATION.md)を参照してください。Docker Engine/Desktop/CLI/Composeは使用しません。APIは127.0.0.1:8080、永続開発DBは127.0.0.1:55432、使い捨てSwift統合テストはhelper実行中だけ127.0.0.1:55433へ公開します。DBの承認済みローカル専用パスワードはGit除外の.local/secrets内、0700/0600で保持し、値を表示しません。
 
 施設アクセスとchallengeの保証範囲・検証手順は[ローカル認証基盤](docs/LOCAL_IDENTITY.md)を参照してください。
 

@@ -8,7 +8,7 @@ import Testing
 @testable import SaunaAPIIdentity
 @testable import SaunaAPIServer
 
-private struct FacilityHTTPFixture: Sendable {
+struct FacilityHTTPFixture: Sendable {
     let pool: PostgresClient
     let facilityA: UUID, facilityB: UUID, emptyFacility: UUID
     let product: UUID, onlyB: UUID
@@ -22,7 +22,7 @@ private struct FacilityHTTPFixture: Sendable {
     }
 }
 
-private func withFacilityHTTPFixture(_ body: @escaping @Sendable (FacilityHTTPFixture) async throws -> Void) async throws {
+func withFacilityHTTPFixture(_ body: @escaping @Sendable (FacilityHTTPFixture) async throws -> Void) async throws {
     var env = ProcessInfo.processInfo.environment
     env["PGDATABASE"] = "sauna_atlas_replay"
     let config = try LocalDatabaseConfiguration(environment: env)
@@ -33,6 +33,7 @@ private func withFacilityHTTPFixture(_ body: @escaping @Sendable (FacilityHTTPFi
         let product = UUID(), onlyB = UUID()
         func cleanup() async throws {
             for facility in facilities {
+                _ = try await pool.query("DELETE FROM public.product_offerings WHERE facility_id=\(facility)").collect()
                 _ = try await pool.query("DELETE FROM public.products WHERE facility_id=\(facility)").collect()
                 _ = try await pool.query("DELETE FROM public.facility_memberships WHERE facility_id=\(facility)").collect()
                 _ = try await pool.query("DELETE FROM public.facilities WHERE id=\(facility)").collect()

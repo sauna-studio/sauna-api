@@ -18,6 +18,8 @@ tags:
   description: Local Passkey registration, signed UV authentication and revocable sessions.
 - name: LocalFacility
   description: Loopback local fixture staff authorization; Workspace verification remains separate.
+- name: ProductCatalog
+  description: Public published catalog and authenticated local fixture staff conditions.
 paths:
   /health:
     get:
@@ -1100,6 +1102,132 @@ paths:
         '413': {$ref: '#/components/responses/LocalFacilityTooLarge'}
         '429': {$ref: '#/components/responses/LocalFacilityRateLimited'}
         '503': {$ref: '#/components/responses/LocalFacilityUnavailable'}
+  /facilities/{facilityID}/products:
+    get:
+      operationId: getPublishedProducts
+      tags: [ProductCatalog]
+      summary: getPublishedProducts
+      description: Configured product conditions only. No inventory availability, binding price, operating calendar, or facility closure policy is implied. Anonymous reads return only published products with configured valid conditions; staff reads require current facility membership and session. Technical integer bounds are not facility business defaults.
+      security: []
+      parameters:
+      - {name: facilityID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: kind, in: query, required: false, schema: {$ref: '#/components/schemas/ProductKind'}}
+      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 100}}
+      responses:
+        '200':
+          description: Bounded catalog projection; missing and draft public details share a fixed404.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProductOfferings'}
+        '400': {$ref: '#/components/responses/LocalFacilityBadRequest'}
+        '401': {$ref: '#/components/responses/LocalFacilityUnauthorized'}
+        '403': {$ref: '#/components/responses/LocalFacilityForbidden'}
+        '404': {$ref: '#/components/responses/LocalFacilityNotFound'}
+        '413': {$ref: '#/components/responses/LocalFacilityTooLarge'}
+        '429': {$ref: '#/components/responses/LocalFacilityRateLimited'}
+        '503': {$ref: '#/components/responses/LocalFacilityUnavailable'}
+  /facilities/{facilityID}/products/{productID}:
+    get:
+      operationId: getPublishedProduct
+      tags: [ProductCatalog]
+      summary: getPublishedProduct
+      description: Configured product conditions only. No inventory availability, binding price, operating calendar, or facility closure policy is implied. Anonymous reads return only published products with configured valid conditions; staff reads require current facility membership and session. Technical integer bounds are not facility business defaults.
+      security: []
+      parameters:
+      - {name: facilityID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: productID, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Bounded catalog projection; missing and draft public details share a fixed404.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProductOffering'}
+        '400': {$ref: '#/components/responses/LocalFacilityBadRequest'}
+        '401': {$ref: '#/components/responses/LocalFacilityUnauthorized'}
+        '403': {$ref: '#/components/responses/LocalFacilityForbidden'}
+        '404': {$ref: '#/components/responses/LocalFacilityNotFound'}
+        '413': {$ref: '#/components/responses/LocalFacilityTooLarge'}
+        '429': {$ref: '#/components/responses/LocalFacilityRateLimited'}
+        '503': {$ref: '#/components/responses/LocalFacilityUnavailable'}
+  /staff/facilities/{facilityID}/offerings:
+    get:
+      operationId: staffListOfferings
+      tags: [ProductCatalog]
+      summary: staffListOfferings
+      description: Configured product conditions only. No inventory availability, binding price, operating calendar, or facility closure policy is implied. Anonymous reads return only published products with configured valid conditions; staff reads require current facility membership and session. Technical integer bounds are not facility business defaults.
+      security: [{StaffSession: []}]
+      parameters:
+      - {name: facilityID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: Origin, in: header, required: true, schema: {type: string, enum: ['http://localhost:5174']}}
+      - {name: kind, in: query, required: false, schema: {$ref: '#/components/schemas/ProductKind'}}
+      - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 100}}
+      - {name: publication, in: query, required: false, schema: {type: string, enum: [draft, published]}}
+      responses:
+        '200':
+          description: Bounded catalog projection; missing and draft public details share a fixed404.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProductOfferings'}
+        '400': {$ref: '#/components/responses/LocalFacilityBadRequest'}
+        '401': {$ref: '#/components/responses/LocalFacilityUnauthorized'}
+        '403': {$ref: '#/components/responses/LocalFacilityForbidden'}
+        '404': {$ref: '#/components/responses/LocalFacilityNotFound'}
+        '413': {$ref: '#/components/responses/LocalFacilityTooLarge'}
+        '429': {$ref: '#/components/responses/LocalFacilityRateLimited'}
+        '503': {$ref: '#/components/responses/LocalFacilityUnavailable'}
+  /staff/facilities/{facilityID}/products/{productID}/offering:
+    get:
+      operationId: staffGetOffering
+      tags: [ProductCatalog]
+      summary: staffGetOffering
+      description: Configured product conditions only. No inventory availability, binding price, operating calendar, or facility closure policy is implied. Anonymous reads return only published products with configured valid conditions; staff reads require current facility membership and session. Technical integer bounds are not facility business defaults.
+      security: [{StaffSession: []}]
+      parameters:
+      - {name: facilityID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: productID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: Origin, in: header, required: true, schema: {type: string, enum: ['http://localhost:5174']}}
+      responses:
+        '200':
+          description: Bounded catalog projection; missing and draft public details share a fixed404.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProductOffering'}
+        '400': {$ref: '#/components/responses/LocalFacilityBadRequest'}
+        '401': {$ref: '#/components/responses/LocalFacilityUnauthorized'}
+        '403': {$ref: '#/components/responses/LocalFacilityForbidden'}
+        '404': {$ref: '#/components/responses/LocalFacilityNotFound'}
+        '413': {$ref: '#/components/responses/LocalFacilityTooLarge'}
+        '429': {$ref: '#/components/responses/LocalFacilityRateLimited'}
+        '503': {$ref: '#/components/responses/LocalFacilityUnavailable'}
+    put:
+      operationId: staffSetOffering
+      tags: [ProductCatalog]
+      summary: staffSetOffering
+      description: Configured product conditions only. No inventory availability, binding price, operating calendar, or facility closure policy is implied. Anonymous reads return only published products with configured valid conditions; staff reads require current facility membership and session. Technical integer bounds are not facility business defaults.
+      security: [{StaffSession: []}]
+      parameters:
+      - {name: facilityID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: productID, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: Origin, in: header, required: true, schema: {type: string, enum: ['http://localhost:5174']}}
+      - {name: X-Sauna-CSRF, in: header, required: true, schema: {type: string, minLength: 43, maxLength: 43}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProductOfferingRequest'}
+      responses:
+        '200':
+          description: Bounded catalog projection; missing and draft public details share a fixed404.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProductOffering'}
+        '400': {$ref: '#/components/responses/LocalFacilityBadRequest'}
+        '401': {$ref: '#/components/responses/LocalFacilityUnauthorized'}
+        '403': {$ref: '#/components/responses/LocalFacilityForbidden'}
+        '404': {$ref: '#/components/responses/LocalFacilityNotFound'}
+        '413': {$ref: '#/components/responses/LocalFacilityTooLarge'}
+        '429': {$ref: '#/components/responses/LocalFacilityRateLimited'}
+        '503': {$ref: '#/components/responses/LocalFacilityUnavailable'}
 components:
   responses:
     LocalFacilityBadRequest:
@@ -1150,6 +1278,45 @@ components:
                 title: Service Unavailable
                 status: 503
   schemas:
+    ProductKind:
+      type: string
+      enum: [private_sauna, shared_sauna, day_tent, overnight_tent]
+    ProductOffering:
+      type: object
+      additionalProperties: false
+      required: [facilityID, id, name, kind, capacity, minimumDurationMinutes, maximumDurationMinutes, minimumNights, maximumNights, published]
+      properties:
+        facilityID: {type: string, format: uuid}
+        id: {type: string, format: uuid}
+        name: {type: string, minLength: 1, maxLength: 200}
+        kind: {$ref: '#/components/schemas/ProductKind'}
+        capacity: {type: integer, minimum: 1, maximum: 2147483647}
+        minimumDurationMinutes: {type: integer, minimum: 1, maximum: 2147483647}
+        maximumDurationMinutes: {type: integer, minimum: 1, maximum: 2147483647}
+        minimumNights: {type: integer, minimum: 0, maximum: 2147483647}
+        maximumNights: {type: integer, minimum: 0, maximum: 2147483647}
+        published: {type: boolean}
+    ProductOfferings:
+      type: object
+      additionalProperties: false
+      required: [products]
+      properties:
+        products:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/ProductOffering'}
+    ProductOfferingRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, capacity, minimumDurationMinutes, maximumDurationMinutes, minimumNights, maximumNights, published]
+      properties:
+        kind: {$ref: '#/components/schemas/ProductKind'}
+        capacity: {type: integer, minimum: 1, maximum: 2147483647}
+        minimumDurationMinutes: {type: integer, minimum: 1, maximum: 2147483647}
+        maximumDurationMinutes: {type: integer, minimum: 1, maximum: 2147483647}
+        minimumNights: {type: integer, minimum: 0, maximum: 2147483647}
+        maximumNights: {type: integer, minimum: 0, maximum: 2147483647}
+        published: {type: boolean}
     LocalFacilityProduct:
       type: object
       additionalProperties: false

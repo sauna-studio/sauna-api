@@ -49,6 +49,28 @@ CREATE TABLE public.products (
     CONSTRAINT products_price_valid CHECK (unit_price_minor >= 0)
 );
 
+-- The redundant kind key binds offer conditions to the product's current kind;
+-- an unconstrained copied kind would allow inconsistent overnight conditions.
+ALTER TABLE public.products ADD CONSTRAINT products_catalog_kind_unique UNIQUE (facility_id, id, kind);
+CREATE TABLE public.product_offerings (
+    facility_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    kind text NOT NULL,
+    capacity integer NOT NULL,
+    minimum_duration_minutes integer NOT NULL,
+    maximum_duration_minutes integer NOT NULL,
+    minimum_nights integer NOT NULL,
+    maximum_nights integer NOT NULL,
+    PRIMARY KEY (facility_id, product_id),
+    CONSTRAINT product_offerings_product_kind_fk FOREIGN KEY (facility_id, product_id, kind) REFERENCES public.products (facility_id, id, kind),
+    CONSTRAINT product_offerings_capacity_valid CHECK (capacity > 0),
+    CONSTRAINT product_offerings_duration_valid CHECK (minimum_duration_minutes > 0 AND maximum_duration_minutes >= minimum_duration_minutes),
+    CONSTRAINT product_offerings_nights_valid CHECK (
+        (kind IN ('private_sauna','shared_sauna','day_tent') AND minimum_nights = 0 AND maximum_nights = 0) OR
+        (kind = 'overnight_tent' AND minimum_nights > 0 AND maximum_nights >= minimum_nights)
+    )
+);
+
 -- State transitions, price calculation, item totals, inventory holds and payment
 -- confirmation require transaction/application rules in subsequent Issues.
 CREATE TABLE public.reservations (

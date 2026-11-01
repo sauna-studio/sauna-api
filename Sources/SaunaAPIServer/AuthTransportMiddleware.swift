@@ -93,7 +93,13 @@ struct AuthTransportMiddleware: ServerMiddleware {
     guard operationID != "getHealth", operationID != "getVersion" else {
       return try await next(request, body, metadata)
     }
+    if operationID == "getPublishedProducts" || operationID == "getPublishedProduct" {
+      return try await publicCatalog(request, body: body, metadata: metadata, operationID: operationID, next: next)
+    }
     do {
+      if operationID == "staffListOfferings" || operationID == "staffGetOffering" || operationID == "staffSetOffering" {
+        try validateCatalogQuery(request, operationID: operationID)
+      }
       let origins = request.headerFields.filter { $0.name == .origin }
       guard origins.count == 1 else { throw AuthHTTPFailure(status: .forbidden) }
       let origin = origins[0].value
@@ -150,7 +156,8 @@ struct AuthTransportMiddleware: ServerMiddleware {
               == "application/json"
           else { throw AuthHTTPFailure(status: .badRequest) }
           do {
-            let shape: AuthenticationTransportBody = operationID == "staffRenameProduct"
+            let shape: AuthenticationTransportBody = operationID == "staffSetOffering"
+              ? .productOffering : operationID == "staffRenameProduct"
               ? .facilityRename : operationID == "beginPasskeyRevocation"
               ? .revocationOptions : (operationID.hasPrefix("finish") ? .finish : .empty)
             try validateAuthenticationTransportJSON(bytes, shape: shape)
@@ -187,6 +194,41 @@ struct AuthTransportMiddleware: ServerMiddleware {
       return AuthHTTPFailure(status: .serviceUnavailable).response()
     }
   }
+  private func publicCatalog(
+    _ request: HTTPRequest, body: HTTPBody?, metadata: ServerRequestMetadata, operationID: String,
+    next: @concurrent @Sendable (HTTPRequest, HTTPBody?, ServerRequestMetadata) async throws -> (HTTPResponse, HTTPBody?)
+  ) async throws -> (HTTPResponse, HTTPBody?) {
+    do {
+      try validateCatalogQuery(request, operationID: operationID)
+      if let body {
+        try await authenticationDeadline {
+          for try await chunk in body {
+            guard chunk.isEmpty else { throw AuthHTTPFailure(status: .badRequest) }
+          }
+        }
+      }
+      guard await limiter.allow("public-catalog") else { throw AuthHTTPFailure(status: .tooManyRequests) }
+      let result = try await next(request, nil, metadata)
+      try Task.checkCancellation()
+      var response = result.0
+      if response.status.code >= 400 {
+        let status = [400,404,413,429,503].contains(response.status.code)
+          ? response.status : (response.status.code >= 500 ? .serviceUnavailable : .badRequest)
+        return AuthHTTPFailure(status: status).response()
+      }
+      response.headerFields[.setCookie] = nil
+      response.headerFields[.cacheControl] = "no-store"
+      response.headerFields[HTTPField.Name("X-Content-Type-Options")!] = "nosniff"
+      response.headerFields[HTTPField.Name("Content-Security-Policy")!] = "frame-ancestors 'none'"
+      return (response, result.1)
+    } catch is CancellationError { throw CancellationError() }
+    catch let error as AuthHTTPFailure { return error.response() }
+    catch {
+      if Task.isCancelled { throw CancellationError() }
+      return AuthHTTPFailure(status: .serviceUnavailable).response()
+    }
+  }
+
 }
 
 func authHTTPError(_ error: any Error) -> any Error {
@@ -199,4 +241,22 @@ func authHTTPError(_ error: any Error) -> any Error {
     }
   }
   return AuthHTTPFailure(status: .serviceUnavailable)
+}
+
+private func validateCatalogQuery(_ request: HTTPRequest, operationID: String) throws {
+    let allowed: Set<String>
+    switch operationID {
+    case "getPublishedProducts": allowed = ["kind", "limit"]
+    case "staffListOfferings": allowed = ["kind", "limit", "publication"]
+    default: allowed = []
+    }
+    let path = request.path ?? "/"
+    guard path.utf8.count <= 4096, let components = URLComponents(string: path) else {
+        throw AuthHTTPFailure(status: .badRequest)
+    }
+    var names = Set<String>()
+    for item in components.queryItems ?? [] {
+        guard allowed.contains(item.name), names.insert(item.name).inserted,
+              let value = item.value, !value.isEmpty else { throw AuthHTTPFailure(status: .badRequest) }
+    }
 }
