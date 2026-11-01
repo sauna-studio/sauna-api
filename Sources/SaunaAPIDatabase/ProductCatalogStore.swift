@@ -152,9 +152,8 @@ struct ProductCatalogStore: Sendable {
     }
     private func product(_ facility: UUID, _ id: UUID, _ name: String, _ published: Bool, _ rawKind: String,
                          _ capacity: Int, _ minDuration: Int, _ maxDuration: Int, _ minNights: Int, _ maxNights: Int) throws -> CatalogProduct {
-        guard let kind = ProductKind(rawValue: rawKind),
-              !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              name.unicodeScalars.count <= 200 else { throw FacilityStoreError.unavailable }
+        guard let kind = ProductKind(rawValue: rawKind) else { throw FacilityStoreError.unavailable }
+        try validateProductResponseName(name)
         do {
             return .init(facilityID: facility, id: id, name: name, published: published,
                          conditions: try .init(kind: kind, capacity: capacity, minimumDurationMinutes: minDuration,
