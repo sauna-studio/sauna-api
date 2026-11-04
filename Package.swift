@@ -50,7 +50,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-runtime", exact: "1.13.3"),
         .package(url: "https://github.com/hummingbird-project/hummingbird", exact: "2.28.1"),
         .package(url: "https://github.com/hummingbird-project/swift-openapi-hummingbird", exact: "2.1.0"),
-        .package(url: "https://github.com/sauna-studio/postgres-nio.git", revision: "5722f49dad5eb951522afafa57320ad3f9ea69d2"),
+        .package(url: "https://github.com/sauna-studio/postgres-nio.git", revision: "1b9c2a873ee6c5dfa33bdb0370f3537c361e801f"),
         .package(url: "https://github.com/apple/swift-log.git", exact: "1.16.2"),
     ],
     targets: [

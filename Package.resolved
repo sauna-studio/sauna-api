@@ -1,5 +1,5 @@
 {
-  "originHash" : "95089010d44bae43e5e39efaa45fb939c2f812030a964d74e599559d506c1258",
+  "originHash" : "b034a239168655bf937e520b1c67299070f89484d63cd394e833e8d6718af819",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -141,7 +141,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sauna-studio/postgres-nio.git",
       "state" : {
-        "revision" : "5722f49dad5eb951522afafa57320ad3f9ea69d2"
+        "revision" : "1b9c2a873ee6c5dfa33bdb0370f3537c361e801f"
       }
     },
     {
