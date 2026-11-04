@@ -174,3 +174,16 @@ Issue8の最初の実CIでは、job rootとcheckout workspaceのowner差によ�
 - 独立Review/Securityを実装と並行起動した。Int64 bindのint4range overloadを明示castで固定し、実shared割り当てで検証した。lock到達前の失効だけで偽合格にならない待機観測、直接DB競合、deadline後のtotal ledgerとreleasedAtまで検査する回帰を追加した。Atlasのname CHECK表現のfalse-positive diffは等価なcanonical表現を保持し、Issue66で追跡する。過去migration編集やdiff抑制で隠していない。
 
 実施設の運用値、Cloud SQLの拡張導入、本番権限、Workspace所属、Apple実端末、inventory HTTP/UIは未検証。GitHub Actions/Codexの最新HEADと独立再実行・最終SHAのreview結果はPRに記録する。
+
+
+## EventLoopFutureとpool write失敗のfork採用（Issue48 / 2026-11-04）
+
+PostgresNIOを`5722f49dad5eb951522afafa57320ad3f9ea69d2`から`1b9c2a873ee6c5dfa33bdb0370f3537c361e801f`へ更新する。fork PR4は最新HEADのCodex再レビュー指摘なし・専用Linux CI両方成功・thread0を確認して通常merge済み。採用revisionは`sauna-1.33.2`のmerge commit `518087dde3fdbe8e346ed15ddee72dfc85730ad0`の履歴に保持され、tree一致も確認した。上流追従mainは`1025d0a10ea9f5dd110f13e9b62aa42dc4358841`のまま。
+
+- 130pinsのうち変更はPostgresNIOのrevisionとmanifest由来のoriginHashだけ。実checkoutも1b9c2a8と一致。他129依存、forkのPackage/lock、MIT LICENSE/NOTICEは元revisionから不変。
+- APIのSwift6.4.2 buildが72.04秒で成功。新しい所有Apple container/PG18で全112定義・skip0が成功（server32/10.435秒、identity40/3.347秒、database35/21.173秒、contract5/0.001秒）。実認証transaction、deadline/cancel後のDB不変・pool回復、施設・在庫境界を既存回帰で確認した。
+- Python53件（公式Atlas checksum検査含む）skip0、OpenAPI検査、diff検査が成功。APIのSources/Tests/OpenAPI/schema/migrations/検証helper/workflowは変更していない。
+- fork側は未修正版の8Future・3async停止と別のlistener crashを、起動待ちと区別したprivate phase記録と所有runner watchdogで確認。実PGでもSELECT/COMMIT/pool query/pool preparedの4停止を再現した。修正後は独立embedded366定義・skip0、全DB128定義中119実行/既定9skip/失敗0、独立した最終の追加4PGテスト・skip0が成功している。
+- 実DB fixtureは新しい所有VM/専用DBだけに投入。承認済みlocal passwordを同用途の私有ファイルから再利用し、値をargv/environmentへ入れず、新しい秘密値は生成していない。一時test utility adapterは復元、全所有VMは削除、既存Sauna DB/volumeは保持。自身の検証ログに承認済みpassword値が含まれないことも検査した。
+
+これはPostgresNIO driver経路の検証であり、Fluent/PostgresKit全体の動作保証ではない。write失敗で完了することは、COMMIT応答喪失時の未commitや自動retryの安全性を保証しない。上流PR698の拡張採用・公式release・fork/identity解消は未完了のためIssue48は開いたままとする。料金仕様Issue18は保留を維持する。API採用PRの独立Review/Security・最新GitHub Codex/CI結果はPRに記録する。

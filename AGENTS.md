@@ -104,6 +104,8 @@ API Key・秘密鍵・DB password等が必要になった時点で作業を停�
 
 公式libraryを優先し、forkが必要なら再現/回帰・最小差分・固定revision・上流PR方針を記録する。Hummingbird/SwiftOpenAPIは公式stable、WebAuthnはPR128系のzunda-pixel/swift-webauthn、PostgresNIOはclosed-channel query promise修正を含むsauna-studio/postgres-nioの固定revisionを使用し、CBORはbrokenhandsio/swift-cbor 0.2.0を使う。実際の依存revisionはPackage.swift/Package.resolved、採用理由・出典・解消条件はdocs/DEPENDENCIES.mdを正本とする。Web共通stackはSvelteKit/Svelte5Runes/TypeScript/Bun/Vite/Tailwind4/shadcn-svelte/Lucide/Superforms+Zod/openapi-fetch/Vitest/Playwright/ESLint+Prettier。
 
+PostgresNIOのconnection async queryと直接PostgresClient query/executeを別経路として検証する。HandlerTaskのwrite受理promiseを操作結果promiseに流用せず、書き込み失敗の伝播とpreparedの早期return・COPY継続・listener固有の完了規約を検証する。lease回復は次の実queryまで確認し、COMMIT応答喪失を未commitの証明にせず自動retryしない。採用revisionと撤去条件はIssue48とdocs/DEPENDENCIES.mdを参照する。
+
 ## ローカルmigration
 
 db/schema.sqlを正本とし、Atlas Community1.3.0でforward-only migrationを生成する。通常のmigration検証は`python scripts/migration_ci.py --runtime apple --base <trusted-full-SHA>`で新しいsocket-only使い捨てclusterへ実行する。既存`local_migrations.py test`は利用中のreplay schemaをresetするため実行しない。生成/forward apply/既存DB verifyは明示した対象と許可があるときだけ既存helperを使う。過去SQLはtrusted Git baseとのbyte比較で不変とし、atlas.sum更新だけで済ませない。scratch DBは固定名・owner・commentを検証し、永続DB/volumeをresetしない。appへowner/schema CREATE/TRUNCATE/admin membershipを与えない。複合FKは越境参照の整合性だけを保証し、認証済sessionによるAPI施設認可を代替しない。詳細と未完了受入はdocs/LOCAL_MIGRATIONS.mdに記録する。
