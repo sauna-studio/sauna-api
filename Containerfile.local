@@ -2,11 +2,14 @@
 FROM docker.io/library/swift:6.4.2-noble@sha256:bca121f6eb59fd80340d1296887b2698ed8f3eb9eca7d80c181f8af769dc7ee0 AS build
 WORKDIR /workspace
 COPY Package.swift Package.resolved ./
+# Cache shared downloads and keep the resolved checkouts in the build stage.
+RUN --mount=type=cache,id=sauna-api-swiftpm-6.4.2-linux-arm64,target=/var/cache/sauna-swiftpm,sharing=locked \
+    swift package --cache-path /var/cache/sauna-swiftpm --force-resolved-versions resolve
 COPY Sources ./Sources
 COPY Tests ./Tests
 # Bound compiler concurrency in the local builder VM.
-RUN swift build --configuration release --product SaunaAPI --force-resolved-versions --jobs 2
-RUN swift test --configuration release --force-resolved-versions --jobs 2
+RUN --network=none swift build --configuration release --product SaunaAPI --force-resolved-versions --jobs 2
+RUN --network=none swift test --configuration release --force-resolved-versions --jobs 2
 
 # The toolchain base intentionally keeps the matching Swift runtime for local use.
 FROM docker.io/library/swift:6.4.2-noble@sha256:bca121f6eb59fd80340d1296887b2698ed8f3eb9eca7d80c181f8af769dc7ee0 AS local
