@@ -8,7 +8,13 @@ Baseline PR #43 selects Hummingbird, OpenAPI Generator (build plugin), Runtime/a
 
 blindlog参照のCurrency型も将来の通貨型利用に備えて宣言するが、現行のISO通貨文字列/minor整数契約は変更しない。
 
-ArgumentParser、HummingbirdAuth、PostgresKit、JWTKit、Cloudflare、HummingbirdPostgres、Valkey、SwiftOTel、UUIDV7もユーザー指示で先に宣言する。宣言だけでclient・exporter・認証・外部送信を有効化しない。JWTやGoogleログインをPasskeyの代替認証として追加しない。API key・外部秘密鍵が必要になる処理は実装開始時にユーザーへ確認する。
+ArgumentParser、HummingbirdAuth、PostgresKit、JWTKit、Cloudflare、HummingbirdPostgres、Valkey、UUIDV7もユーザー指示で先に宣言する。宣言だけでclient・exporter・認証・外部送信を有効化しない。JWTやGoogleログインをPasskeyの代替認証として追加しない。API key・外部秘密鍵が必要になる処理は実装開始時にユーザーへ確認する。
+
+## Local HTTP tracing
+
+PR #70 selects SwiftOTel 1.6.0 with the `OTLPHTTP` trait and makes the existing Swift Distributed Tracing 1.7.3 pin direct. SwiftOTel provides the exporter and service lifecycle. The `Tracing` product lets the API create spans with generated operation IDs and HTTP response codes. The gRPC exporter and its three gRPC pins are omitted. Export starts only when `SAUNA_LOCAL_OTLP_HOST` is set for the trusted local Collector described in [Local development](LOCAL_DEVELOPMENT.md).
+
+When the local exporter is removed or replaced, remove its bootstrap and the unused `OTel` product. Drop the direct `Tracing` declaration only after the last direct import is removed. Regenerate the lock and verify the supported trace path or its intentional removal.
 
 ## 積み重ねた依存PR
 
@@ -24,7 +30,7 @@ swift-postgresqlはユーザー指定`fix-postgresql-closure-lifetime`とPostgre
 
 ## 検証
 
-Use `swift package resolve` and `swift test --force-resolved-versions` when changing actual dependencies. The final catalogue has 130 resolved pins; its baseline passed 38 actual PostgreSQL tests, and stacked authentication PR44 passed 67. The fork passed 65 strict native and exact-snapshot Apple-container/Linux tests plus its latest-head GitHub review/CI gates. These are scoped checks, not validation of every unused library feature. Current PR validation must still follow the latest head.
+Use `swift package resolve` and `swift test --force-resolved-versions` when changing actual dependencies. The current catalogue has 127 resolved pins. Historical test counts below apply to their recorded revisions. Validate current changes against the latest head.
 
 For documentation-only corrections, validate locked-source/license evidence, links, repository policy and diff. Dependency changes also require the current graph's application build/tests. Database integration tests require the approved private password file; an unconfigured skip is not a successful database check.
 
@@ -32,7 +38,7 @@ For documentation-only corrections, validate locked-source/license evidence, lin
 
 ## Historical catalogue validation snapshot (before Issue48 expansion)
 
-WebAuthn PR128 compatibility revision `0d1a4e6408f0a611a98b408ab6a465e40303ac7c` requires Swift6.4 and uses native Swift literal replacement/padding. CBOR0.2.0 is pinned to `52432a1118bcbabb9a973330c3af85d8ddf3f015`; PostgresNIO fork revision `5722f49dad5eb951522afafa57320ad3f9ea69d2` is retained on merged sauna-1.33.2 history. The final lock has130 pins and contains no old SwiftCBOR.
+WebAuthn PR128 compatibility revision `0d1a4e6408f0a611a98b408ab6a465e40303ac7c` requires Swift6.4 and uses native Swift literal replacement/padding. CBOR0.2.0 is pinned to `52432a1118bcbabb9a973330c3af85d8ddf3f015`; PostgresNIO fork revision `5722f49dad5eb951522afafa57320ad3f9ea69d2` is retained on merged sauna-1.33.2 history. That historical lock had 130 pins and contained no old SwiftCBOR.
 
 The catalogue baseline passed38 real-PostgreSQL host tests. The downstream authentication implementation passed67 real-PostgreSQL tests on the consolidated revision; independent Review reran67 on the same runtime sources before the compiler-policy-only consolidation. The fork passed65 strict native and exact-snapshot Apple-container/Linux tests. These results do not replace latest-HEAD GitHub CI and Codex review.
 
@@ -41,9 +47,9 @@ SwiftPM6.4 currently warns that transitive upstream PostgresNIO URLs and the dir
 
 ## Locked direct dependency evidence
 
-This is a technical source/license inventory of the 25 direct Package.swift declarations, not a claim that all 130 resolved packages or every feature is used or verified. Evidence was read from each cached Git object at the exact Package.resolved revision (`git ls-tree` and `git show revision:path`), including full license text, appended exceptions and present NOTICE files. Source/target declarations were checked separately; version labels and the old blindlog reference do not substitute for locked source evidence.
+This is a technical source/license inventory of the 26 direct Package.swift declarations, not a claim that all transitive packages or every feature is used or verified. Evidence was read from each cached Git object at the exact Package.resolved revision (`git ls-tree` and `git show revision:path`), including full license text, appended exceptions and present NOTICE files. Source/target declarations were checked separately; version labels and the old blindlog reference do not substitute for locked source evidence.
 
-A = selected by catalogue baseline PR43 (including its build plugin). B = already transitively used by that foundation and explicitly selected in PR44. C = declared/locked in PR43, with runtime or macro products selected by stacked authentication PR44. D = declared by the user instruction for future work, with no product selected by a Sauna target in either implementation. Declaration alone does not activate external clients, exporters or authentication mechanisms.
+A = selected by catalogue baseline PR43 (including its build plugin). B = already transitively used by that foundation and explicitly selected in PR44. C = declared/locked in PR43, with runtime or macro products selected by stacked authentication PR44. D = declared by the user instruction for future work, with no product selected by a Sauna target in either implementation. E = selected by PR70 for opt-in local HTTP tracing. Declaration alone does not activate external clients, exporters or authentication mechanisms.
 
 | Direct package | Exact locked source | Actual adoption scope | Observed license and evidence |
 | --- | --- | --- | --- |
@@ -59,7 +65,8 @@ A = selected by catalogue baseline PR43 (including its build plugin). B = alread
 | cloudflare-swift | [`ed1ec02c70cdf301159d7a770b91d4c70763f81b`](https://github.com/zunda-pixel/cloudflare-swift/tree/ed1ec02c70cdf301159d7a770b91d4c70763f81b) | D: declared; no Cloudflare client/deployment | Apache-2.0; [LICENSE](https://github.com/zunda-pixel/cloudflare-swift/blob/ed1ec02c70cdf301159d7a770b91d4c70763f81b/LICENSE) |
 | hummingbird-postgres | [`c1674a4eaef71440df8a05538d937eb0e6609227`](https://github.com/hummingbird-project/hummingbird-postgres/tree/c1674a4eaef71440df8a05538d937eb0e6609227) | D: declared; no integration selected | Apache-2.0; [LICENSE](https://github.com/hummingbird-project/hummingbird-postgres/blob/c1674a4eaef71440df8a05538d937eb0e6609227/LICENSE), [LICENSE.txt](https://github.com/hummingbird-project/hummingbird-postgres/blob/c1674a4eaef71440df8a05538d937eb0e6609227/LICENSE.txt) |
 | valkey-swift | [`541f50f8cb89fe8e15dbb50331be45f60a1d2f98`](https://github.com/valkey-io/valkey-swift/tree/541f50f8cb89fe8e15dbb50331be45f60a1d2f98) | D: declared; no Valkey client/store | Apache-2.0; [LICENSE.txt](https://github.com/valkey-io/valkey-swift/blob/541f50f8cb89fe8e15dbb50331be45f60a1d2f98/LICENSE.txt); [Notice.txt](https://github.com/valkey-io/valkey-swift/blob/541f50f8cb89fe8e15dbb50331be45f60a1d2f98/Notice.txt) |
-| swift-otel | [`f6771f8c6b1c3c08d386638fc5c3015b452136d9`](https://github.com/swift-otel/swift-otel/tree/f6771f8c6b1c3c08d386638fc5c3015b452136d9) | D: declared; no exporter enabled | Apache-2.0; [LICENSE.txt](https://github.com/swift-otel/swift-otel/blob/f6771f8c6b1c3c08d386638fc5c3015b452136d9/LICENSE.txt); [NOTICE.txt](https://github.com/swift-otel/swift-otel/blob/f6771f8c6b1c3c08d386638fc5c3015b452136d9/NOTICE.txt) |
+| swift-otel | [`f6771f8c6b1c3c08d386638fc5c3015b452136d9`](https://github.com/swift-otel/swift-otel/tree/f6771f8c6b1c3c08d386638fc5c3015b452136d9) | E: `OTel` with `OTLPHTTP`; export requires local opt-in | Apache-2.0; [LICENSE.txt](https://github.com/swift-otel/swift-otel/blob/f6771f8c6b1c3c08d386638fc5c3015b452136d9/LICENSE.txt); [NOTICE.txt](https://github.com/swift-otel/swift-otel/blob/f6771f8c6b1c3c08d386638fc5c3015b452136d9/NOTICE.txt) |
+| swift-distributed-tracing | [`789663680a3a4767e698be46bc154a3bc5c64fef`](https://github.com/apple/swift-distributed-tracing/tree/789663680a3a4767e698be46bc154a3bc5c64fef) | E: `Tracing` span API used by server middleware | Apache-2.0; [LICENSE.txt](https://github.com/apple/swift-distributed-tracing/blob/789663680a3a4767e698be46bc154a3bc5c64fef/LICENSE.txt) |
 | swift-webauthn | [`0d1a4e6408f0a611a98b408ab6a465e40303ac7c`](https://github.com/zunda-pixel/swift-webauthn/tree/0d1a4e6408f0a611a98b408ab6a465e40303ac7c) | C: PR44 signed Passkey verification | Apache-2.0; [LICENSE](https://github.com/zunda-pixel/swift-webauthn/blob/0d1a4e6408f0a611a98b408ab6a465e40303ac7c/LICENSE); [NOTICE.txt](https://github.com/zunda-pixel/swift-webauthn/blob/0d1a4e6408f0a611a98b408ab6a465e40303ac7c/NOTICE.txt) |
 | uuidv7 | [`f9340a6f666e794a035d15df5be36bc091b60028`](https://github.com/zunda-pixel/UUIDV7/tree/f9340a6f666e794a035d15df5be36bc091b60028) | D: declared, no selected product; license unresolved | No license grant found; rights-reserved source headers; [source headers](https://github.com/zunda-pixel/UUIDV7/blob/f9340a6f666e794a035d15df5be36bc091b60028/Sources/UUIDV7/UUIDV7.swift) |
 | swift-postgresql | [`e5dca9dca136f5dd646bc98e2f3cdf1090430e26`](https://github.com/zunda-pixel/swift-postgresql/tree/e5dca9dca136f5dd646bc98e2f3cdf1090430e26) | C: PR44 rendering bridge on async connection | Apache-2.0; [LICENSE.md](https://github.com/zunda-pixel/swift-postgresql/blob/e5dca9dca136f5dd646bc98e2f3cdf1090430e26/LICENSE.md) |
