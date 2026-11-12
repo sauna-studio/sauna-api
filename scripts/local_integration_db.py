@@ -31,19 +31,25 @@ cp /input/prerequisites-verify.sql "$run_dir/prerequisites-verify.sql"
 cp /approved/app-password "$run_dir/app-password"
 chmod 600 "$run_dir/app-password"
 chown -R postgres:postgres "$run_dir"
-exec gosu postgres env -i PATH=/usr/lib/postgresql/18/bin:/usr/local/bin:/usr/bin:/bin HOME="$run_dir" LANG=C.UTF-8 /bin/bash "$run_dir/start.sh" "$run_dir"
+exec gosu postgres env -i PATH=/usr/lib/postgresql/18/bin:/usr/local/bin:/usr/bin:/bin HOME="$run_dir" LANG=C.UTF-8 /bin/bash "$run_dir/start.sh" "$run_dir" "${1:-0.0.0.0}"
 '''
 
 START = r'''set -euo pipefail
 umask 077
 run_dir=$1
+listen=$2
+case "$listen" in
+  0.0.0.0) cidr=0.0.0.0/0 ;;
+  127.0.0.1) cidr=127.0.0.1/32 ;;
+  *) exit 1 ;;
+esac
 cluster="$run_dir/cluster"
 socket="$run_dir/socket"
 mkdir -m 700 "$socket"
 initdb --pgdata="$cluster" --auth-local=peer --auth-host=reject > "$run_dir/init.log" 2>&1
 printf 'sauna_ci postgres sauna_admin\n' > "$cluster/pg_ident.conf"
-printf 'local all postgres peer\nlocal all sauna_admin peer map=sauna_ci\nhost sauna_atlas_replay sauna_app 0.0.0.0/0 scram-sha-256\nhost all all 0.0.0.0/0 reject\nhost all all ::0/0 reject\n' > "$cluster/pg_hba.conf"
-pg_ctl --pgdata="$cluster" --log="$run_dir/server.log" --options="-c listen_addresses='0.0.0.0' -c unix_socket_directories='$socket' -c unix_socket_permissions=0700 -c password_encryption=scram-sha-256 -c log_statement=none -c log_min_error_statement=panic -c log_error_verbosity=terse" --wait start > /dev/null
+printf 'local all postgres peer\nlocal all sauna_admin peer map=sauna_ci\nhost sauna_atlas_replay sauna_app %s scram-sha-256\nhost all all 0.0.0.0/0 reject\nhost all all ::0/0 reject\n' "$cidr" > "$cluster/pg_hba.conf"
+pg_ctl --pgdata="$cluster" --log="$run_dir/server.log" --options="-c listen_addresses='$listen' -c unix_socket_directories='$socket' -c unix_socket_permissions=0700 -c password_encryption=scram-sha-256 -c log_statement=none -c log_min_error_statement=panic -c log_error_verbosity=terse" --wait start > /dev/null
 trap 'pg_ctl --pgdata="$cluster" --mode=immediate --wait stop > /dev/null 2>&1 || true' EXIT
 psql --no-password --no-psqlrc --host="$socket" --username=postgres --dbname=postgres --set=ON_ERROR_STOP=1 <<'SQL' > "$run_dir/setup.log" 2>&1
 CREATE ROLE sauna_admin LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;

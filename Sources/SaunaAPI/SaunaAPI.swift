@@ -13,20 +13,23 @@ import Glibc
 struct SaunaAPICommand {
     static func main() async {
         do {
-            let configuration = try ServerConfiguration(
-                port: ProcessInfo.processInfo.environment["PORT"],
-                bindHost: ProcessInfo.processInfo.environment["BIND_HOST"]
-            )
-            let enabled = ProcessInfo.processInfo.environment["SAUNA_LOCAL_AUTH"]
+            let environment = ProcessInfo.processInfo.environment
+            let configuration = try ServerConfiguration(port: environment["PORT"], bindHost: environment["BIND_HOST"])
+            let tracing = try bootstrapLocalHTTPTracing(collectorHost: environment["SAUNA_LOCAL_OTLP_HOST"])
+            let services = tracing.map { [$0] } ?? []
+            let enabled = environment["SAUNA_LOCAL_AUTH"]
             guard enabled == nil || enabled == "1" else { throw AuthenticationError.invalidInput }
             if enabled == "1" {
                 guard configuration.bindHost == "127.0.0.1" || configuration.bindHost == "::1" else { throw AuthenticationError.invalidInput }
-                let database = try LocalDatabaseConfiguration(environment: ProcessInfo.processInfo.environment)
+                let database = try LocalDatabaseConfiguration(environment: environment)
                 let client = database.makeClient()
-                let app = try makeApplication(configuration: configuration, api: .init(authenticationClient: client), services: [client])
+                let app = try makeApplication(
+                    configuration: configuration, api: .init(authenticationClient: client),
+                    services: services + [client], traceHTTP: tracing != nil
+                )
                 try await app.runService()
             } else {
-                let app = try makeApplication(configuration: configuration)
+                let app = try makeApplication(configuration: configuration, services: services, traceHTTP: tracing != nil)
                 try await app.runService()
             }
         } catch let error as ServerConfiguration.ConfigurationError {

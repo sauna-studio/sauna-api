@@ -38,7 +38,8 @@ let package = Package(
         .package(url: "https://github.com/zunda-pixel/cloudflare-swift.git", from: "0.8.2"),
         .package(url: "https://github.com/hummingbird-project/hummingbird-postgres.git", from: "1.0.0"),
         .package(url: "https://github.com/valkey-io/valkey-swift.git", from: "1.3.0"),
-        .package(url: "https://github.com/swift-otel/swift-otel.git", from: "1.0.0"),
+        .package(url: "https://github.com/swift-otel/swift-otel.git", from: "1.0.0", traits: ["OTLPHTTP"]),
+        .package(url: "https://github.com/apple/swift-distributed-tracing.git", exact: "1.7.3"),
         // Based on upstream PR #128, with only reviewed compatibility fixes.
         .package(url: "https://github.com/zunda-pixel/swift-webauthn.git", revision: "0d1a4e6408f0a611a98b408ab6a465e40303ac7c"),
         .package(url: "https://github.com/zunda-pixel/UUIDV7.git", branch: "replace-to-swift-testing"),
@@ -79,6 +80,8 @@ let package = Package(
                 .product(name: "PostgresNIO", package: "postgres-nio"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "OpenAPIHummingbird", package: "swift-openapi-hummingbird"),
+                .product(name: "OTel", package: "swift-otel"),
+                .product(name: "Tracing", package: "swift-distributed-tracing"),
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
             ],
             swiftSettings: apiSwiftSettings

@@ -35,6 +35,52 @@ DBは127.0.0.1:55432、database sauna_local、app role sauna_app。admin/app cre
 
 DB pool/診断はlocal-loopback専用。remote接続・Cloud SQL TLS・認証/HTTP業務認可はまだ実装していない。schema/Atlasは[ローカルmigration](LOCAL_MIGRATIONS.md)を参照する。/healthはlivenessでありDB障害状態を返さない。
 
+Linux APIとPostgreSQL 18の実接続は、検証用の同一Apple container VM内で確認できます。事前にこのリポジトリの `Containerfile.local` からAPIイメージをローカルでビルドし、Pythonの依存関係と承認済みのローカルDBパスワードを用意します。
+
+```sh
+.venv/bin/python scripts/local_linux_api_db.py --api-image sauna-api:local
+```
+
+この検証ではAPIからループバックで一時PostgreSQLへ接続し、登録オプションHTTPレスポンスに対応する行をDB側で確認します。
+
+HTTPトレースは `SAUNA_LOCAL_OTLP_HOST` を指定した場合のみ、OTLP/HTTPの `4318/v1/traces` に送信します。APIは生成済みのOpenAPI operation IDとHTTPステータスを記録します。検証でCollectorを併用する場合は、専用の `container network create --internal` ネットワークに信頼できるCollectorを配置し、上の検証コマンドに `--network <名前> --collector-ip <CollectorのIPv4>` を追加します。このローカル経路は平文HTTPです。
+
+Collectorの検証設定例を一時ディレクトリの `otel.yaml` に保存します。
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+exporters:
+  debug:
+    verbosity: detailed
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]
+```
+
+```sh
+collector_name="sauna-otel-test-$(uuidgen | tr '[:upper:]' '[:lower:]')"
+container network create --internal "$collector_name"
+container run -d --name "$collector_name" --network "$collector_name" --no-dns \
+  --read-only --cap-drop ALL \
+  --mount "type=bind,source=$OTEL_CONFIG_DIR,target=/probe,readonly" \
+  docker.io/otel/opentelemetry-collector:0.165.0 --config=/probe/otel.yaml
+container ls
+# COLLECTOR_IP に上で表示された Collector の IPv4 を設定する。
+.venv/bin/python scripts/local_linux_api_db.py --api-image sauna-api:local \
+  --network "$collector_name" --collector-ip "$COLLECTOR_IP"
+container logs "$collector_name"
+container delete --force "$collector_name"
+container network delete "$collector_name"
+```
+
+`OTEL_CONFIG_DIR` には `otel.yaml` のある一時ディレクトリの絶対パスを指定します。秘密情報を含まないこのディレクトリと設定ファイルには、CollectorのUID 10001がアクセスできるよう、それぞれ0755と0644を設定します。Collectorの出力で `service.name=sauna-api`、`getHealth`、`beginPasskeyRegistration` のスパンとHTTPステータスを確認します。
+
 ## 検証
 
 ```sh
@@ -44,7 +90,7 @@ PGPASSWORD_FILE="$PWD/.local/secrets/postgres-app-password" swift test --force-r
 .venv/bin/python -m unittest discover -s scripts -p 'test_*.py'
 ```
 
-未設定PGPASSWORD_FILEでintegrationがskipされた場合はDB検証済みと扱わない。ContainerfileのLinux testsにはprivate secretを渡さないため、DB実接続ケースはhostで別途検証する。
+ContainerfileのLinuxテスト工程にはDBパスワードを渡さないため、実DBが必要なテストはホストで実行します。Linux APIの実行時の接続は、上記の同一VMスモークで別途検証します。
 
 ## 施設境界の次の設計
 
