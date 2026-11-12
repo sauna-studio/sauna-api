@@ -30,7 +30,7 @@ swift-postgresqlはユーザー指定`fix-postgresql-closure-lifetime`とPostgre
 
 ## 検証
 
-Use `swift package resolve` and `swift test --force-resolved-versions` when changing actual dependencies. The final catalogue has 130 resolved pins; its baseline passed 38 actual PostgreSQL tests, and stacked authentication PR44 passed 67. The fork passed 65 strict native and exact-snapshot Apple-container/Linux tests plus its latest-head GitHub review/CI gates. These are scoped checks, not validation of every unused library feature. Current PR validation must still follow the latest head.
+Use `swift package resolve` and `swift test --force-resolved-versions` when changing actual dependencies. The current catalogue has 127 resolved pins. Historical test counts below apply to their recorded revisions. Validate current changes against the latest head.
 
 For documentation-only corrections, validate locked-source/license evidence, links, repository policy and diff. Dependency changes also require the current graph's application build/tests. Database integration tests require the approved private password file; an unconfigured skip is not a successful database check.
 
@@ -38,7 +38,7 @@ For documentation-only corrections, validate locked-source/license evidence, lin
 
 ## Historical catalogue validation snapshot (before Issue48 expansion)
 
-WebAuthn PR128 compatibility revision `0d1a4e6408f0a611a98b408ab6a465e40303ac7c` requires Swift6.4 and uses native Swift literal replacement/padding. CBOR0.2.0 is pinned to `52432a1118bcbabb9a973330c3af85d8ddf3f015`; PostgresNIO fork revision `5722f49dad5eb951522afafa57320ad3f9ea69d2` is retained on merged sauna-1.33.2 history. The final lock has130 pins and contains no old SwiftCBOR.
+WebAuthn PR128 compatibility revision `0d1a4e6408f0a611a98b408ab6a465e40303ac7c` requires Swift6.4 and uses native Swift literal replacement/padding. CBOR0.2.0 is pinned to `52432a1118bcbabb9a973330c3af85d8ddf3f015`; PostgresNIO fork revision `5722f49dad5eb951522afafa57320ad3f9ea69d2` is retained on merged sauna-1.33.2 history. That historical lock had 130 pins and contained no old SwiftCBOR.
 
 The catalogue baseline passed38 real-PostgreSQL host tests. The downstream authentication implementation passed67 real-PostgreSQL tests on the consolidated revision; independent Review reran67 on the same runtime sources before the compiler-policy-only consolidation. The fork passed65 strict native and exact-snapshot Apple-container/Linux tests. These results do not replace latest-HEAD GitHub CI and Codex review.
 
