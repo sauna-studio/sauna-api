@@ -170,9 +170,10 @@ SELECT ('46000000-0000-0000-0000-00000000000' || id)::uuid,
        facility,
        '46000000-0000-0000-0000-000000000005',
        statement_timestamp() - make_interval(days => age)
-FROM (VALUES (1, 60, '46000000-0000-0000-0000-000000000004'::uuid),
+FROM (VALUES (4, 35, '46000000-0000-0000-0000-000000000006'::uuid),
              (2, 40, '46000000-0000-0000-0000-000000000006'::uuid),
-             (3, 5,  '46000000-0000-0000-0000-000000000004'::uuid)) seed(id, age, facility);
+             (3, 5,  '46000000-0000-0000-0000-000000000004'::uuid),
+             (1, 60, '46000000-0000-0000-0000-000000000004'::uuid)) seed(id, age, facility);
 
 CREATE SCHEMA audit_review;
 REVOKE ALL ON SCHEMA audit_review FROM PUBLIC;
@@ -217,7 +218,7 @@ retention_count() {
 audit_remaining() {
     psql_cmd sauna_admin sauna_audit_sandbox --command="SELECT string_agg(right(claim_token::text, 1), ',' ORDER BY revoked_at) FROM public.workspace_employment_revocation_audit"
 }
-[[ $(retention_count "$run_dir/audit-retention-preview.sql") == 1 && $(audit_remaining) == '1,2,3' ]]
+[[ $(retention_count "$run_dir/audit-retention-preview.sql") == 1 && $(audit_remaining) == '1,2,4,3' ]]
 # Hold the oldest row in another transaction until the first batch completes.
 # The readiness marker must follow a successful row lock so this cannot pass
 # because the retention batch ran before its competing transaction.
@@ -239,9 +240,10 @@ until grep -Fxq audit-lock-acquired "$run_dir/audit-lock.log"; do
     [[ $SECONDS -lt $audit_lock_deadline ]] && kill -0 "$audit_lock_pid" 2>/dev/null || exit 1
     sleep 0.05
 done
-[[ $(retention_count "$retention_file") == 1 && $(audit_remaining) == '1,3' ]]
+[[ $(retention_count "$retention_file") == 1 && $(audit_remaining) == '1,4,3' ]]
 printf 'ROLLBACK;\n\\q\n' >&"$audit_lock_input"
 wait "$audit_lock_pid"
+[[ $(retention_count "$retention_file") == 1 && $(audit_remaining) == '4,3' ]]
 [[ $(retention_count "$retention_file") == 1 && $(audit_remaining) == 3 ]]
 [[ $(retention_count "$retention_file") == 0 && $(audit_remaining) == 3 ]]
 [[ $(psql_cmd sauna_admin sauna_atlas_replay --command="$verify_sql") == 1 ]]
