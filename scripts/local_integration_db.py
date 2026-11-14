@@ -31,13 +31,19 @@ cp /input/prerequisites-verify.sql "$run_dir/prerequisites-verify.sql"
 cp /approved/app-password "$run_dir/app-password"
 chmod 600 "$run_dir/app-password"
 chown -R postgres:postgres "$run_dir"
-exec gosu postgres env -i PATH=/usr/lib/postgresql/18/bin:/usr/local/bin:/usr/bin:/bin HOME="$run_dir" LANG=C.UTF-8 /bin/bash "$run_dir/start.sh" "$run_dir" "${1:-0.0.0.0}"
+exec gosu postgres env -i PATH=/usr/lib/postgresql/18/bin:/usr/local/bin:/usr/bin:/bin HOME="$run_dir" LANG=C.UTF-8 /bin/bash "$run_dir/start.sh" "$run_dir" "${1:-0.0.0.0}" "${2:-restricted}"
 '''
 
 START = r'''set -euo pipefail
 umask 077
 run_dir=$1
 listen=$2
+audit=$3
+case "$audit" in
+  restricted) database=sauna_employment_worker_test ;;
+  fixture) database=sauna_atlas_replay ;;
+  *) exit 1 ;;
+esac
 case "$listen" in
   0.0.0.0) cidr=0.0.0.0/0 ;;
   127.0.0.1) cidr=127.0.0.1/32 ;;
@@ -48,20 +54,20 @@ socket="$run_dir/socket"
 mkdir -m 700 "$socket"
 initdb --pgdata="$cluster" --auth-local=peer --auth-host=reject > "$run_dir/init.log" 2>&1
 printf 'sauna_ci postgres sauna_admin\n' > "$cluster/pg_ident.conf"
-printf 'local all postgres peer\nlocal all sauna_admin peer map=sauna_ci\nhost sauna_atlas_replay sauna_app %s scram-sha-256\nhost all all 0.0.0.0/0 reject\nhost all all ::0/0 reject\n' "$cidr" > "$cluster/pg_hba.conf"
+printf 'local all postgres peer\nlocal all sauna_admin peer map=sauna_ci\nhost %s sauna_app %s scram-sha-256\nhost all all 0.0.0.0/0 reject\nhost all all ::0/0 reject\n' "$database" "$cidr" > "$cluster/pg_hba.conf"
 pg_ctl --pgdata="$cluster" --log="$run_dir/server.log" --options="-c listen_addresses='$listen' -c unix_socket_directories='$socket' -c unix_socket_permissions=0700 -c password_encryption=scram-sha-256 -c log_statement=none -c log_min_error_statement=panic -c log_error_verbosity=terse" --wait start > /dev/null
 trap 'pg_ctl --pgdata="$cluster" --mode=immediate --wait stop > /dev/null 2>&1 || true' EXIT
-psql --no-password --no-psqlrc --host="$socket" --username=postgres --dbname=postgres --set=ON_ERROR_STOP=1 <<'SQL' > "$run_dir/setup.log" 2>&1
+psql --no-password --no-psqlrc --host="$socket" --username=postgres --dbname=postgres --set=ON_ERROR_STOP=1 <<SQL > "$run_dir/setup.log" 2>&1
 CREATE ROLE sauna_admin LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE ROLE sauna_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-CREATE DATABASE sauna_atlas_replay OWNER sauna_admin;
+CREATE DATABASE "$database" OWNER sauna_admin;
 SQL
 # Only fixed reviewed prerequisite SQL is staged; no data-defined superuser program.
 bootstrap_sql=$(cat "$run_dir/prerequisites-bootstrap.sql")
 verify_sql=$(cat "$run_dir/prerequisites-verify.sql")
-psql --no-password --no-psqlrc --host="$socket" --username=postgres --dbname=sauna_atlas_replay --set=ON_ERROR_STOP=1 --command="SET statement_timeout='10s';
+psql --no-password --no-psqlrc --host="$socket" --username=postgres --dbname="$database" --set=ON_ERROR_STOP=1 --command="SET statement_timeout='10s';
 $bootstrap_sql" > "$run_dir/prerequisites.log" 2>&1
-[[ $(psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname=sauna_atlas_replay --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="$verify_sql") == 1 ]]
+[[ $(psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname="$database" --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="$verify_sql") == 1 ]]
 psql --no-password --no-psqlrc --host="$socket" --username=postgres --dbname=postgres --set=ON_ERROR_STOP=1 --set=secret_file="$run_dir/app-password" <<'SQL' >> "$run_dir/setup.log" 2>&1
 SELECT set_config('sauna.integration_password_file', :'secret_file', false);
 DO $body$
@@ -75,14 +81,22 @@ SQL
 rm "$run_dir/app-password"
 # Do not allow psql's single-backslash-command mode for candidate input.
 schema_sql=$(cat "$run_dir/schema.sql")
-psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname=sauna_atlas_replay --set=ON_ERROR_STOP=1 --command="SET statement_timeout='10s';
+psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname="$database" --set=ON_ERROR_STOP=1 --command="SET statement_timeout='10s';
 $schema_sql" > "$run_dir/schema.log" 2>&1
-psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname=sauna_atlas_replay --set=ON_ERROR_STOP=1 <<'SQL' > "$run_dir/grants.log" 2>&1
+psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname="$database" --set=ON_ERROR_STOP=1 <<'SQL' > "$run_dir/grants.log" 2>&1
 REVOKE CREATE ON SCHEMA public FROM PUBLIC, sauna_app;
 GRANT USAGE ON SCHEMA public TO sauna_app;
 GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO sauna_app;
+REVOKE ALL ON public.workspace_employment_revocation_audit FROM PUBLIC, sauna_app;
+REVOKE ALL (claim_token, facility_id, user_id, revoked_at) ON public.workspace_employment_revocation_audit FROM PUBLIC, sauna_app;
+GRANT INSERT (claim_token, facility_id, user_id) ON public.workspace_employment_revocation_audit TO sauna_app;
 SQL
-[[ $(psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname=sauna_atlas_replay --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="$verify_sql") == 1 ]]
+# Full Swift fixtures need audit assertions and cleanup in this disposable DB only.
+if [[ "$audit" == fixture ]]; then
+    psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname="$database" --set=ON_ERROR_STOP=1 \
+      --command='GRANT SELECT, DELETE ON public.workspace_employment_revocation_audit TO sauna_app;' >> "$run_dir/grants.log" 2>&1
+fi
+[[ $(psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname="$database" --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="$verify_sql") == 1 ]]
 touch /tmp/sauna-integration-ready
 while sleep 30; do :; done
 '''
@@ -159,7 +173,7 @@ def cleanup(name, owner):
     command(['container', 'delete', '--force', name])
 
 
-def run_tests(scratch=None, test_filter=None):
+def run_tests(scratch=None, test_filter=None, restrict_employment_audit=False):
     if platform.system() != 'Darwin':
         raise RuntimeError('Local integration tests require Apple container on macOS')
     ensure_port_free()
@@ -188,7 +202,8 @@ def run_tests(scratch=None, test_filter=None):
                      '--publish', f'127.0.0.1:{PORT}:5432', '--entrypoint', '/bin/sh',
                      '--mount', f'type=bind,source={public},target=/input,readonly',
                      '--mount', f'type=bind,source={private},target=/approved,readonly',
-                     migration_ci.IMAGE, '-c', BOOTSTRAP], timeout=60)
+                     migration_ci.IMAGE, '-c', BOOTSTRAP, 'integration-db', '0.0.0.0',
+                     'restricted' if restrict_employment_audit else 'fixture'], timeout=60)
             deadline = time.monotonic() + 40
             while True:
                 ready = subprocess.run(['container', 'exec', '--user', 'postgres', name,
@@ -202,7 +217,7 @@ def run_tests(scratch=None, test_filter=None):
             (private / 'app-password').unlink()
             env = os.environ.copy()
             env.update(PGHOST='127.0.0.1', PGPORT=str(PORT), PGUSER='sauna_app',
-                       PGDATABASE='sauna_atlas_replay', PGPASSWORD_FILE=str(password))
+                       PGDATABASE='sauna_employment_worker_test' if restrict_employment_audit else 'sauna_atlas_replay', PGPASSWORD_FILE=str(password))
             args = ['xcrun', 'swift', 'test', '--force-resolved-versions']
             if scratch:
                 args += ['--scratch-path', scratch]
@@ -218,11 +233,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--scratch-path')
     parser.add_argument('--filter')
+    parser.add_argument('--restrict-employment-audit', action='store_true',
+                        help='Use INSERT-only audit privileges instead of Swift fixture privileges')
     args = parser.parse_args()
+    if args.restrict_employment_audit and args.filter is None:
+        args.filter = 'executableStartsSyntheticEmploymentWorkerAndExitsWithSIGTERM'
     def terminate(_signal, _frame):
         raise KeyboardInterrupt()
     signal.signal(signal.SIGTERM, terminate)
-    return run_tests(args.scratch_path, args.filter)
+    return run_tests(args.scratch_path, args.filter, args.restrict_employment_audit)
 
 
 if __name__ == '__main__':

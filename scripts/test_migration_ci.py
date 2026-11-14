@@ -42,6 +42,18 @@ class IsolatedMigrationSafetyTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'no historical'):
                 ci.trusted_base(value)
 
+    def test_candidate_guard_can_run_as_a_future_trusted_base(self):
+        base = ci.command(['git', 'rev-parse', 'HEAD']).strip()
+        with tempfile.TemporaryDirectory() as temporary:
+            trusted = Path(temporary)
+            # A later CI run extracts only these files from the trusted commit.
+            # Run the current source in that same isolated Python environment.
+            for name in ('local_migrations.py', 'local_postgres.py'):
+                (trusted / name).write_bytes((ci.ROOT / 'scripts' / name).read_bytes())
+            result = ci.guard_with_base(base, trusted, ci.ROOT / 'db/migrations')
+            self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+            self.assertGreater(int(result.stdout.strip()), 0)
+
     def test_atlas_sum_symlink_is_rejected_before_any_atlas_execution_or_write(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -89,7 +101,9 @@ class IsolatedMigrationSafetyTests(unittest.TestCase):
             staged = root / 'stage'
             ci.stage_inputs(staged, snapshot)
             self.assertEqual(sorted(str(p.relative_to(staged)) for p in staged.rglob('*') if p.is_file()), [
-                'db/migrations/20261101000000_fixture.sql', 'db/migrations/atlas.sum', 'db/postgresql-prerequisites.json', 'db/schema.sql', 'db/tests/001_fixture.sql', 'prerequisites-bootstrap.sql', 'prerequisites-verify.sql', 'replay.sh'])
+                'audit-retention-apply.sql', 'audit-retention-marker.sql', 'audit-retention-preview.sql',
+                'db/migrations/20261101000000_fixture.sql', 'db/migrations/atlas.sum', 'db/postgresql-prerequisites.json',
+                'db/schema.sql', 'db/tests/001_fixture.sql', 'prerequisites-bootstrap.sql', 'prerequisites-verify.sql', 'replay.sh'])
             # Later source edits cannot change already validated snapshot bytes.
             (root / 'db/schema.sql').write_text('CHANGED AFTER SNAPSHOT')
             self.assertEqual((staged / 'db/schema.sql').read_text(), 'CREATE TABLE fixture(id int);')

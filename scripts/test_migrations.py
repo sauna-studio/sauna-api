@@ -82,7 +82,11 @@ class MigrationPolicyTests(unittest.TestCase):
         sql = query.call_args.args[0]
         for table in tables:
             self.assertIn('public.' + table, sql)
-        self.assertIn('GRANT SELECT, INSERT, UPDATE, DELETE ON', sql)
+        crud_grant = next(line for line in sql.splitlines() if line.startswith('GRANT SELECT'))
+        audit_table = 'public.workspace_employment_revocation_audit'
+        self.assertNotIn(audit_table, crud_grant)
+        self.assertIn(f'REVOKE ALL ON {audit_table} FROM PUBLIC, sauna_app;', sql)
+        self.assertIn(f'GRANT INSERT (claim_token, facility_id, user_id) ON {audit_table} TO sauna_app;', sql)
         self.assertNotIn('GRANT CREATE', sql)
         self.assertNotIn('TRUNCATE', sql)
 

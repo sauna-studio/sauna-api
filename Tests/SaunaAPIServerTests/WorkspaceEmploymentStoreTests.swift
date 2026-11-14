@@ -5,6 +5,22 @@ import Testing
 @testable import SaunaAPIDatabase
 
 extension WorkspaceEmploymentSchedulerTests {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["PGPASSWORD_FILE"] != nil, "Requires isolated PostgreSQL fixture database"))
+    func syntheticScopeDoesNotLeaseOrdinaryEnrollments() async throws {
+        try await withEmploymentFixture { fixture in
+            try await fixture.execute("""
+                INSERT INTO public.workspace_employment_rechecks (facility_id, user_id, directory_user_id, customer_id, group_id)
+                VALUES (\(fixture.otherFacility), \(fixture.user), 'fixture-sauna-employment-user',
+                        'fixture-sauna-employment-tenant', 'fixture-sauna-employment-group')
+                """)
+            let synthetic = try #require(try await fixture.store.claimNextDue(leaseSeconds: 60, scope: .synthetic))
+            #expect(synthetic.facilityID == fixture.otherFacility)
+            #expect(try await fixture.store.claimNextDue(leaseSeconds: 60, scope: .synthetic) == nil)
+            let ordinary = try #require(try await fixture.store.claimNextDue(leaseSeconds: 60))
+            #expect(ordinary.facilityID == fixture.facility)
+        }
+    }
+
     @Test(.enabled(if: ProcessInfo.processInfo.environment["PGPASSWORD_FILE"] != nil, "Requires isolated PostgreSQL fixture database")) func confirmedIneligibilityRevokesOnlyEnrolledMembershipAndAuditsOnce() async throws {
         try await withEmploymentFixture { fixture in
             let results = try await withThrowingTaskGroup(of: WorkspaceEmploymentClaim?.self) { group in

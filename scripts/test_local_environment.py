@@ -89,6 +89,7 @@ class LocalEnvironmentTests(unittest.TestCase):
         with patch.object(pg, 'verify_directory'), patch.object(pg, 'verify_file', return_value='x' * 48), patch.object(pg, 'query', side_effect=['1\n', '0\n']) as query, self.assertRaises(RuntimeError):
             pg.configure_role()
         self.assertEqual(query.call_count, 2)
+        self.assertIn('WHERE membership.member = app.oid', query.call_args.args[0])
         self.assertTrue(all('CREATE ROLE' not in call.args[0] for call in query.call_args_list))
 
     def test_secret_generation_requires_git_exclusion_first(self):
