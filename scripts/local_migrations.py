@@ -11,12 +11,12 @@ import subprocess
 import tempfile
 
 import local_postgres as db
-from local_employment_audit import MARKER
 from pglast import parse_sql, enums
 
 ROOT = Path(__file__).resolve().parents[1]
 ATLAS = ROOT.parent / '.tools/atlas/atlas'
 MIGRATIONS = ROOT / 'db/migrations'
+MARKER = 'sauna-local-atlas-v1'
 SCRATCH = {'sauna_atlas_dev', 'sauna_atlas_replay'}
 TABLES = ('facilities', 'users', 'facility_memberships', 'products', 'reservations', 'reservation_items', 'webauthn_challenges', 'passkey_accounts', 'passkey_registration_intents', 'passkey_credentials', 'auth_sessions', 'passkey_management_intents', 'product_offerings', 'inventory_resources', 'inventory_product_resources', 'inventory_claims', 'workspace_employment_rechecks', 'workspace_employment_revocation_audit')
 

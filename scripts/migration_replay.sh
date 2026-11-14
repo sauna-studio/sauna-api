@@ -36,6 +36,7 @@ CREATE ROLE sauna_admin LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION 
 CREATE ROLE sauna_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE DATABASE sauna_atlas_replay OWNER sauna_admin;
 CREATE DATABASE sauna_ci_dev OWNER sauna_admin;
+CREATE DATABASE sauna_audit_sandbox OWNER sauna_admin;
 SQL
 [[ $(psql_cmd postgres postgres -c 'SHOW listen_addresses') == '' ]]
 [[ $(psql_cmd sauna_app sauna_atlas_replay -c "SELECT session_user=current_user AND session_user='sauna_app'") == t ]]
@@ -43,7 +44,7 @@ SQL
 # accept arbitrary candidate SQL for bootstrap-superuser execution.
 bootstrap_sql=$(cat "$run_dir/prerequisites-bootstrap.sql")
 verify_sql=$(cat "$run_dir/prerequisites-verify.sql")
-for database in sauna_atlas_replay sauna_ci_dev; do
+for database in sauna_atlas_replay sauna_ci_dev sauna_audit_sandbox; do
     psql_cmd postgres "$database" --command="SET statement_timeout='10s';
 $bootstrap_sql" > "$run_dir/prerequisites.log" 2>&1
     [[ $(psql_cmd sauna_admin "$database" --command="$verify_sql") == 1 ]]
@@ -147,15 +148,22 @@ expect_retention_refusal() {
     if psql_cmd "$1" "$2" --file="$retention_file" > "$run_dir/retention-refusal.log" 2>&1; then
         return 1
     fi
-    grep -Fq 'Refusing unowned disposable replay database' "$run_dir/retention-refusal.log"
+    grep -Fq 'Refusing unowned audit sandbox database' "$run_dir/retention-refusal.log"
 }
+expect_retention_refusal sauna_admin sauna_audit_sandbox
+psql_cmd sauna_admin sauna_audit_sandbox --command="COMMENT ON DATABASE sauna_audit_sandbox IS 'an-unexpected-marker'" > /dev/null
+expect_retention_refusal sauna_admin sauna_audit_sandbox
+psql_cmd sauna_admin sauna_atlas_replay --command="COMMENT ON DATABASE sauna_atlas_replay IS 'sauna-local-atlas-v1'" > /dev/null
 expect_retention_refusal sauna_admin sauna_atlas_replay
-expect_retention_refusal sauna_admin sauna_ci_dev
-psql_cmd sauna_admin sauna_atlas_replay --command="COMMENT ON DATABASE sauna_atlas_replay IS 'an-unexpected-marker'" > /dev/null
+psql_cmd sauna_admin sauna_audit_sandbox --file="$run_dir/audit-retention-marker.sql" > /dev/null
 expect_retention_refusal sauna_admin sauna_atlas_replay
-psql_cmd sauna_admin sauna_atlas_replay --file="$run_dir/audit-retention-marker.sql" > /dev/null
-expect_retention_refusal sauna_app sauna_atlas_replay
-psql_cmd sauna_admin sauna_atlas_replay <<'SQL' > /dev/null
+expect_retention_refusal sauna_app sauna_audit_sandbox
+psql_cmd postgres postgres --command="ALTER DATABASE sauna_audit_sandbox OWNER TO postgres" > /dev/null
+expect_retention_refusal sauna_admin sauna_audit_sandbox
+psql_cmd postgres postgres --command="ALTER DATABASE sauna_audit_sandbox OWNER TO sauna_admin" > /dev/null
+audit_target="postgres://sauna_admin@/sauna_audit_sandbox?host=$socket&sslmode=disable&search_path=public"
+"$atlas" migrate apply --url "$audit_target" --dir "file://$run_dir/db/migrations" > "$run_dir/audit-apply.log" 2>&1
+psql_cmd sauna_admin sauna_audit_sandbox <<'SQL' > /dev/null
 INSERT INTO public.workspace_employment_revocation_audit (claim_token, facility_id, user_id, revoked_at)
 SELECT ('46000000-0000-0000-0000-00000000000' || id)::uuid,
        '46000000-0000-0000-0000-000000000004',
@@ -164,10 +172,10 @@ SELECT ('46000000-0000-0000-0000-00000000000' || id)::uuid,
 FROM (VALUES (1, 60), (2, 40), (3, 5)) seed(id, age);
 SQL
 retention_count() {
-    psql_cmd sauna_admin sauna_atlas_replay --quiet --file="$1"
+    psql_cmd sauna_admin sauna_audit_sandbox --quiet --file="$1"
 }
 audit_remaining() {
-    psql_cmd sauna_admin sauna_atlas_replay --command="SELECT string_agg(right(claim_token::text, 1), ',' ORDER BY revoked_at) FROM public.workspace_employment_revocation_audit"
+    psql_cmd sauna_admin sauna_audit_sandbox --command="SELECT string_agg(right(claim_token::text, 1), ',' ORDER BY revoked_at) FROM public.workspace_employment_revocation_audit"
 }
 [[ $(retention_count "$run_dir/audit-retention-preview.sql") == 1 && $(audit_remaining) == '1,2,3' ]]
 [[ $(retention_count "$retention_file") == 1 && $(audit_remaining) == '2,3' ]]

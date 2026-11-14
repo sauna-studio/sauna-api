@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
-"""Count or prune one bounded batch of employment audits in the owned local DB."""
-import argparse
-import subprocess
-
-import local_postgres as db
-
-DATABASE = 'sauna_atlas_replay'
-MARKER = 'sauna-local-atlas-v1'
+"""Generate guarded retention SQL for the isolated audit fixture."""
+DATABASE = 'sauna_audit_sandbox'
+MARKER = 'sauna-local-audit-sandbox-v1'
 
 
 def retention_sql(days, limit, apply):
@@ -47,30 +42,9 @@ BEGIN
               AND pg_catalog.pg_get_userbyid(datdba) = 'sauna_admin'
               AND pg_catalog.shobj_description(oid, 'pg_database') = '{MARKER}'
         ) THEN
-        RAISE EXCEPTION 'Refusing unowned disposable replay database';
+        RAISE EXCEPTION 'Refusing unowned audit sandbox database';
     END IF;
 END;
 $guard$;
 {operation}
 COMMIT;'''
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--keep-days', type=int, required=True)
-    parser.add_argument('--batch-size', type=int, required=True)
-    parser.add_argument('--apply', action='store_true', help='Delete the batch; otherwise report the eligible count')
-    args = parser.parse_args()
-    result = db.query(retention_sql(args.keep_days, args.batch_size, args.apply), database=DATABASE, role='admin')
-    # Suppress all row data; psql may print transaction command tags.
-    counts = [line for line in result.splitlines() if line.isascii() and line.isdecimal()]
-    if len(counts) != 1 or int(counts[0]) > args.batch_size:
-        raise RuntimeError('Unexpected retention result')
-    print(f'{"Deleted" if args.apply else "Eligible in this batch"}: {counts[0]}')
-
-
-if __name__ == '__main__':
-    try:
-        main()
-    except (RuntimeError, OSError, ValueError, subprocess.SubprocessError):
-        raise SystemExit('Local audit retention failed; raw diagnostics suppressed.') from None

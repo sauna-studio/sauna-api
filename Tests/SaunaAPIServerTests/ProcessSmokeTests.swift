@@ -136,11 +136,12 @@ private func waitForExit(_ process: Process) async throws {
 
 extension WorkspaceEmploymentSchedulerTests {
     @Test(arguments: [
-        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "PGDATABASE": "sauna_atlas_replay"],
+        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "PGDATABASE": "sauna_employment_worker_test"],
         ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_local"],
-        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_atlas_replay", "BIND_HOST": "0.0.0.0"],
-        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_atlas_replay", "PGHOST": "192.0.2.1"],
-        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "unknown-mode", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_atlas_replay"],
+        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_atlas_replay"],
+        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_employment_worker_test", "BIND_HOST": "0.0.0.0"],
+        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_employment_worker_test", "PGHOST": "192.0.2.1"],
+        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "unknown-mode", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_employment_worker_test"],
     ])
     func unsafeEmploymentWorkerConfigurationExits(environment: [String: String]) async throws {
         let process = Process()
@@ -172,9 +173,9 @@ extension WorkspaceEmploymentSchedulerTests {
         #expect(process.terminationStatus != 0)
     }
 
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["PGPASSWORD_FILE"] != nil, "Requires isolated PostgreSQL fixture database"))
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["PGDATABASE"] == "sauna_employment_worker_test", "Requires isolated PostgreSQL fixture database"))
     func executableStartsSyntheticEmploymentWorkerAndExitsWithSIGTERM() async throws {
-        try await withFacilityHTTPFixture { fixture in
+        try await withFacilityHTTPFixture(database: "sauna_employment_worker_test") { fixture in
             let facilities = [fixture.facilityA, fixture.emptyFacility]
             let user = fixture.managerID
             _ = try await fixture.pool.query("""
@@ -191,7 +192,7 @@ extension WorkspaceEmploymentSchedulerTests {
             var environment = ProcessInfo.processInfo.environment.filter { ["PGPASSWORD_FILE", "PGHOST", "PGPORT", "PGUSER"].contains($0.key) }
             environment["PORT"] = String(port)
             environment["BIND_HOST"] = "127.0.0.1"
-            environment["PGDATABASE"] = "sauna_atlas_replay"
+            environment["PGDATABASE"] = "sauna_employment_worker_test"
             environment["SAUNA_LOCAL_AUTH"] = "1"
             environment["SAUNA_LOCAL_EMPLOYMENT_RECHECK"] = "synthetic-ineligible"
             process.environment = environment

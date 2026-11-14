@@ -23,7 +23,7 @@ struct SaunaAPICommand {
             let employmentMode = environment["SAUNA_LOCAL_EMPLOYMENT_RECHECK"]
             if let employmentMode {
                 guard employmentMode == "synthetic-ineligible", enabled == "1",
-                      environment["PGDATABASE"] == "sauna_atlas_replay"
+                      environment["PGDATABASE"] == "sauna_employment_worker_test"
                 else { throw AuthenticationError.invalidInput }
             }
             if enabled == "1" {

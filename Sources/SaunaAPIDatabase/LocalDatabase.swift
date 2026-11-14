@@ -36,7 +36,7 @@ public struct LocalDatabaseConfiguration: Sendable, CustomStringConvertible, Cus
               !portValue.isEmpty, portValue.utf8.allSatisfy({ $0 >= 48 && $0 <= 57 }),
               let port = Int(portValue), (1...65535).contains(port),
               (environment["PGUSER"] ?? "sauna_app") == "sauna_app",
-              ["sauna_local", "sauna_atlas_replay"].contains(database),
+              ["sauna_local", "sauna_atlas_replay", "sauna_employment_worker_test"].contains(database),
               let path = environment["PGPASSWORD_FILE"], path.hasPrefix("/") else {
             throw LocalDatabaseError.invalidConfiguration
         }

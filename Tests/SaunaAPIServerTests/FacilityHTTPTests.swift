@@ -22,9 +22,9 @@ struct FacilityHTTPFixture: Sendable {
     }
 }
 
-func withFacilityHTTPFixture(_ body: @escaping @Sendable (FacilityHTTPFixture) async throws -> Void) async throws {
+func withFacilityHTTPFixture(database: String = "sauna_atlas_replay", _ body: @escaping @Sendable (FacilityHTTPFixture) async throws -> Void) async throws {
     var env = ProcessInfo.processInfo.environment
-    env["PGDATABASE"] = "sauna_atlas_replay"
+    env["PGDATABASE"] = database
     let config = try LocalDatabaseConfiguration(environment: env)
     try await LocalDatabase.withClient(configuration: config, timeout: .seconds(30)) { pool in
         let facilities = [UUID(), UUID(), UUID()]
