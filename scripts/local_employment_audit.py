@@ -32,6 +32,7 @@ SELECT count(*) FROM removed;'''
         operation = f'SELECT count(*) FROM ({candidates}) candidates;'
     return f'''BEGIN;
 SET LOCAL statement_timeout = '5s';
+SET LOCAL TIME ZONE 'UTC';
 DO $guard$
 BEGIN
     IF current_database() <> '{DATABASE}'

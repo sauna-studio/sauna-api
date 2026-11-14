@@ -15,10 +15,10 @@ cluster="$run_dir/cluster"
 socket="$run_dir/socket"
 mkdir -m 700 "$socket"
 initdb --pgdata="$cluster" --username=postgres --auth-local=peer --auth-host=reject > "$run_dir/init.log" 2>&1
-# Peer retains kernel identity checks. The two exact mappings exercise SQL role
-# separation; they do not pretend that one OS user becomes two isolated users.
-printf 'sauna_ci postgres sauna_admin\nsauna_ci postgres sauna_app\n' > "$cluster/pg_ident.conf"
-printf 'local all all peer map=sauna_ci\nhost all all 0.0.0.0/0 reject\nhost all all ::0/0 reject\n' > "$cluster/pg_hba.conf"
+# Peer retains kernel identity checks. These exact mappings exercise SQL role
+# separation; they do not pretend that one OS user becomes multiple isolated users.
+printf 'sauna_ci postgres sauna_admin\nsauna_ci postgres sauna_app\nsauna_audit postgres sauna_audit_reviewer\n' > "$cluster/pg_ident.conf"
+printf 'local sauna_audit_sandbox sauna_audit_reviewer peer map=sauna_audit\nlocal all sauna_audit_reviewer reject\nlocal all all peer map=sauna_ci\nhost all all 0.0.0.0/0 reject\nhost all all ::0/0 reject\n' > "$cluster/pg_hba.conf"
 # The bootstrap superuser is needed only to create this disposable cluster's roles.
 sed -i '1i local all postgres peer' "$cluster/pg_hba.conf"
 started=0
@@ -34,6 +34,7 @@ psql_cmd() {
 psql_cmd postgres postgres <<'SQL' > /dev/null
 CREATE ROLE sauna_admin LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE ROLE sauna_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+CREATE ROLE sauna_audit_reviewer LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE DATABASE sauna_atlas_replay OWNER sauna_admin;
 CREATE DATABASE sauna_ci_dev OWNER sauna_admin;
 CREATE DATABASE sauna_audit_sandbox OWNER sauna_admin;
@@ -166,11 +167,50 @@ audit_target="postgres://sauna_admin@/sauna_audit_sandbox?host=$socket&sslmode=d
 psql_cmd sauna_admin sauna_audit_sandbox <<'SQL' > /dev/null
 INSERT INTO public.workspace_employment_revocation_audit (claim_token, facility_id, user_id, revoked_at)
 SELECT ('46000000-0000-0000-0000-00000000000' || id)::uuid,
-       '46000000-0000-0000-0000-000000000004',
+       facility,
        '46000000-0000-0000-0000-000000000005',
        statement_timestamp() - make_interval(days => age)
-FROM (VALUES (1, 60), (2, 40), (3, 5)) seed(id, age);
+FROM (VALUES (1, 60, '46000000-0000-0000-0000-000000000004'::uuid),
+             (2, 40, '46000000-0000-0000-0000-000000000006'::uuid),
+             (3, 5,  '46000000-0000-0000-0000-000000000004'::uuid)) seed(id, age, facility);
+
+CREATE SCHEMA audit_review;
+REVOKE ALL ON SCHEMA audit_review FROM PUBLIC;
+-- A caller-set value cannot define the facility boundary. The barrier keeps
+-- caller predicates from receiving values outside the chosen facility.
+CREATE VIEW audit_review.employment_revocations WITH (security_barrier = true) AS
+SELECT claim_token, facility_id, user_id, revoked_at
+FROM public.workspace_employment_revocation_audit
+WHERE facility_id = '46000000-0000-0000-0000-000000000004'::uuid;
+GRANT USAGE ON SCHEMA audit_review TO sauna_audit_reviewer;
+GRANT SELECT ON audit_review.employment_revocations TO sauna_audit_reviewer;
 SQL
+audit_review() {
+    psql_cmd sauna_audit_reviewer sauna_audit_sandbox "$@"
+}
+[[ $(audit_review -c "SELECT session_user=current_user AND current_user='sauna_audit_reviewer'") == t ]]
+[[ $(audit_review -c "SELECT string_agg(right(claim_token::text, 1), ',' ORDER BY revoked_at) FROM audit_review.employment_revocations") == '1,3' ]]
+[[ $(audit_review -c "SELECT count(*) FROM audit_review.employment_revocations WHERE facility_id='46000000-0000-0000-0000-000000000006'") == 0 ]]
+[[ $(audit_review -c "SELECT string_agg(column_name, ',' ORDER BY ordinal_position)
+    FROM information_schema.columns WHERE table_schema='audit_review' AND table_name='employment_revocations'") == 'claim_token,facility_id,user_id,revoked_at' ]]
+expect_audit_review_denial() {
+    if audit_review --set=VERBOSITY=verbose --command="$1" > "$run_dir/audit-review-denial.log" 2>&1; then
+        return 1
+    fi
+    grep -Fq 'ERROR:  42501:' "$run_dir/audit-review-denial.log"
+}
+expect_audit_review_denial 'SELECT * FROM public.workspace_employment_revocation_audit'
+expect_audit_review_denial 'INSERT INTO audit_review.employment_revocations DEFAULT VALUES'
+expect_audit_review_denial 'UPDATE audit_review.employment_revocations SET revoked_at=statement_timestamp()'
+expect_audit_review_denial 'DELETE FROM audit_review.employment_revocations'
+expect_audit_review_denial 'DELETE FROM public.workspace_employment_revocation_audit'
+expect_audit_review_denial 'SET ROLE sauna_admin'
+expect_audit_review_denial 'SET ROLE sauna_app'
+if psql_cmd sauna_audit_reviewer sauna_atlas_replay -c 'SELECT current_user' > "$run_dir/audit-review-connection.log" 2>&1; then
+    exit 1
+fi
+grep -Fq 'pg_hba.conf rejects connection' "$run_dir/audit-review-connection.log"
+printf 'Facility audit reviewer canaries passed: scoped SELECT and denied base table, writes, role changes, and replay connection\n'
 retention_count() {
     psql_cmd sauna_admin sauna_audit_sandbox --quiet --file="$1"
 }
