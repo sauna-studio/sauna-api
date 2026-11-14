@@ -31,13 +31,15 @@ cp /input/prerequisites-verify.sql "$run_dir/prerequisites-verify.sql"
 cp /approved/app-password "$run_dir/app-password"
 chmod 600 "$run_dir/app-password"
 chown -R postgres:postgres "$run_dir"
-exec gosu postgres env -i PATH=/usr/lib/postgresql/18/bin:/usr/local/bin:/usr/bin:/bin HOME="$run_dir" LANG=C.UTF-8 /bin/bash "$run_dir/start.sh" "$run_dir" "${1:-0.0.0.0}"
+exec gosu postgres env -i PATH=/usr/lib/postgresql/18/bin:/usr/local/bin:/usr/bin:/bin HOME="$run_dir" LANG=C.UTF-8 /bin/bash "$run_dir/start.sh" "$run_dir" "${1:-0.0.0.0}" "${2:-restricted}"
 '''
 
 START = r'''set -euo pipefail
 umask 077
 run_dir=$1
 listen=$2
+audit=$3
+case "$audit" in restricted|fixture) ;; *) exit 1 ;; esac
 case "$listen" in
   0.0.0.0) cidr=0.0.0.0/0 ;;
   127.0.0.1) cidr=127.0.0.1/32 ;;
@@ -81,7 +83,15 @@ psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname=
 REVOKE CREATE ON SCHEMA public FROM PUBLIC, sauna_app;
 GRANT USAGE ON SCHEMA public TO sauna_app;
 GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO sauna_app;
+REVOKE ALL ON public.workspace_employment_revocation_audit FROM PUBLIC, sauna_app;
+REVOKE ALL (claim_token, facility_id, user_id, revoked_at) ON public.workspace_employment_revocation_audit FROM PUBLIC, sauna_app;
+GRANT INSERT (claim_token, facility_id, user_id) ON public.workspace_employment_revocation_audit TO sauna_app;
 SQL
+# Full Swift fixtures need audit assertions and cleanup in this disposable DB only.
+if [[ "$audit" == fixture ]]; then
+    psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname=sauna_atlas_replay --set=ON_ERROR_STOP=1 \
+      --command='GRANT SELECT, DELETE ON public.workspace_employment_revocation_audit TO sauna_app;' >> "$run_dir/grants.log" 2>&1
+fi
 [[ $(psql --no-password --no-psqlrc --host="$socket" --username=sauna_admin --dbname=sauna_atlas_replay --set=ON_ERROR_STOP=1 --tuples-only --no-align --command="$verify_sql") == 1 ]]
 touch /tmp/sauna-integration-ready
 while sleep 30; do :; done
@@ -159,7 +169,7 @@ def cleanup(name, owner):
     command(['container', 'delete', '--force', name])
 
 
-def run_tests(scratch=None, test_filter=None):
+def run_tests(scratch=None, test_filter=None, restrict_employment_audit=False):
     if platform.system() != 'Darwin':
         raise RuntimeError('Local integration tests require Apple container on macOS')
     ensure_port_free()
@@ -188,7 +198,8 @@ def run_tests(scratch=None, test_filter=None):
                      '--publish', f'127.0.0.1:{PORT}:5432', '--entrypoint', '/bin/sh',
                      '--mount', f'type=bind,source={public},target=/input,readonly',
                      '--mount', f'type=bind,source={private},target=/approved,readonly',
-                     migration_ci.IMAGE, '-c', BOOTSTRAP], timeout=60)
+                     migration_ci.IMAGE, '-c', BOOTSTRAP, 'integration-db', '0.0.0.0',
+                     'restricted' if restrict_employment_audit else 'fixture'], timeout=60)
             deadline = time.monotonic() + 40
             while True:
                 ready = subprocess.run(['container', 'exec', '--user', 'postgres', name,
@@ -218,11 +229,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--scratch-path')
     parser.add_argument('--filter')
+    parser.add_argument('--restrict-employment-audit', action='store_true',
+                        help='Use INSERT-only audit privileges instead of Swift fixture privileges')
     args = parser.parse_args()
     def terminate(_signal, _frame):
         raise KeyboardInterrupt()
     signal.signal(signal.SIGTERM, terminate)
-    return run_tests(args.scratch_path, args.filter)
+    return run_tests(args.scratch_path, args.filter, args.restrict_employment_audit)
 
 
 if __name__ == '__main__':

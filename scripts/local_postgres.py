@@ -137,7 +137,16 @@ def configure_role():
         query("SET log_statement='none'; SET log_min_error_statement='panic';\nCREATE ROLE sauna_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '" + password + "';\nGRANT CONNECT ON DATABASE sauna_local TO sauna_app;\n")
     elif present.strip() != '1':
         raise RuntimeError('Unexpected local role state')
-    safe = query("SELECT count(*) FROM pg_roles WHERE rolname='sauna_app' AND rolcanlogin AND NOT rolsuper AND NOT rolcreatedb AND NOT rolcreaterole AND NOT rolreplication AND NOT rolbypassrls;")
+    safe = query("""
+SELECT count(*) FROM pg_catalog.pg_roles AS app
+WHERE app.rolname = 'sauna_app' AND app.rolcanlogin
+  AND NOT app.rolsuper AND NOT app.rolcreatedb AND NOT app.rolcreaterole
+  AND NOT app.rolreplication AND NOT app.rolbypassrls
+  AND NOT EXISTS (
+      SELECT 1 FROM pg_catalog.pg_auth_members AS membership
+      WHERE membership.member = app.oid
+  );
+""")
     if safe.strip() != '1':
         raise RuntimeError('Existing local app role has unexpected privileges')
     print('Restricted sauna_app role is configured; existing role passwords are not reset')

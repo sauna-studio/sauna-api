@@ -34,16 +34,16 @@ psql_cmd() {
 psql_cmd postgres postgres <<'SQL' > /dev/null
 CREATE ROLE sauna_admin LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
 CREATE ROLE sauna_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
-CREATE DATABASE sauna_ci_replay OWNER sauna_admin;
+CREATE DATABASE sauna_atlas_replay OWNER sauna_admin;
 CREATE DATABASE sauna_ci_dev OWNER sauna_admin;
 SQL
 [[ $(psql_cmd postgres postgres -c 'SHOW listen_addresses') == '' ]]
-[[ $(psql_cmd sauna_app sauna_ci_replay -c "SELECT session_user=current_user AND session_user='sauna_app'") == t ]]
+[[ $(psql_cmd sauna_app sauna_atlas_replay -c "SELECT session_user=current_user AND session_user='sauna_app'") == t ]]
 # Extension lifecycle is separate from Atlas CE; see tracking Issue64. Never
 # accept arbitrary candidate SQL for bootstrap-superuser execution.
 bootstrap_sql=$(cat "$run_dir/prerequisites-bootstrap.sql")
 verify_sql=$(cat "$run_dir/prerequisites-verify.sql")
-for database in sauna_ci_replay sauna_ci_dev; do
+for database in sauna_atlas_replay sauna_ci_dev; do
     psql_cmd postgres "$database" --command="SET statement_timeout='10s';
 $bootstrap_sql" > "$run_dir/prerequisites.log" 2>&1
     [[ $(psql_cmd sauna_admin "$database" --command="$verify_sql") == 1 ]]
@@ -85,59 +85,94 @@ psql_cmd postgres sauna_ci_prereq_probe -c "DROP EXTENSION btree_gist; GRANT CRE
 printf 'PostgreSQL prerequisite missing/version/namespace/owner/privilege canaries passed\n'
 # The socket is explicit in the driver URL; no PGHOST/service/password settings
 # can redirect Atlas toward the developer's active database.
-target="postgres://sauna_admin@/sauna_ci_replay?host=$socket&sslmode=disable&search_path=public"
+target="postgres://sauna_admin@/sauna_atlas_replay?host=$socket&sslmode=disable&search_path=public"
 dev="postgres://sauna_admin@/sauna_ci_dev?host=$socket&sslmode=disable&search_path=public"
 atlas="$run_dir/atlas"
-[[ $(psql_cmd sauna_admin sauna_ci_replay -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'") == 0 ]]
+[[ $(psql_cmd sauna_admin sauna_atlas_replay -c "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'") == 0 ]]
 "$atlas" migrate validate --dir "file://$run_dir/db/migrations" > "$run_dir/validate.log" 2>&1
 "$atlas" migrate apply --url "$target" --dir "file://$run_dir/db/migrations" > "$run_dir/apply.log" 2>&1
-journal_before=$(psql_cmd sauna_admin sauna_ci_replay -c 'SELECT row_to_json(r)::text FROM public.atlas_schema_revisions r ORDER BY version')
+journal_before=$(psql_cmd sauna_admin sauna_atlas_replay -c 'SELECT row_to_json(r)::text FROM public.atlas_schema_revisions r ORDER BY version')
 [[ -n $journal_before ]]
 "$atlas" migrate apply --url "$target" --dir "file://$run_dir/db/migrations" > "$run_dir/reapply.log" 2>&1
-journal_after=$(psql_cmd sauna_admin sauna_ci_replay -c 'SELECT row_to_json(r)::text FROM public.atlas_schema_revisions r ORDER BY version')
+journal_after=$(psql_cmd sauna_admin sauna_atlas_replay -c 'SELECT row_to_json(r)::text FROM public.atlas_schema_revisions r ORDER BY version')
 [[ $journal_before == "$journal_after" ]]
 check_diff() {
     "$atlas" schema diff --from "$target" --to "file://$run_dir/db/schema.sql" --dev-url "$dev" --exclude atlas_schema_revisions --format '{{ sql . }}' > "$run_dir/diff.sql" 2> "$run_dir/diff.log"
     [[ ! -s "$run_dir/diff.sql" ]]
 }
 check_diff
-[[ $(psql_cmd sauna_admin sauna_ci_replay --command="$verify_sql") == 1 ]]
+[[ $(psql_cmd sauna_admin sauna_atlas_replay --command="$verify_sql") == 1 ]]
 [[ $(psql_cmd sauna_admin sauna_ci_dev --command="$verify_sql") == 1 ]]
-psql_cmd sauna_admin sauna_ci_replay -c 'ALTER TABLE public.facilities ADD COLUMN sauna_ci_drift_probe integer' > /dev/null
+psql_cmd sauna_admin sauna_atlas_replay -c 'ALTER TABLE public.facilities ADD COLUMN sauna_ci_drift_probe integer' > /dev/null
 # Check the actual diff result and retained column separately: a command failure
 # or a verifier that silently repairs the database must not pass this canary.
 "$atlas" schema diff --from "$target" --to "file://$run_dir/db/schema.sql" --dev-url "$dev" --exclude atlas_schema_revisions --format '{{ sql . }}' > "$run_dir/drift.sql" 2> "$run_dir/drift.log"
 [[ -s "$run_dir/drift.sql" ]]
 grep -q sauna_ci_drift_probe "$run_dir/drift.sql"
-[[ $(psql_cmd sauna_admin sauna_ci_replay -c "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='facilities' AND column_name='sauna_ci_drift_probe'") == 1 ]]
-psql_cmd sauna_admin sauna_ci_replay -c 'ALTER TABLE public.facilities DROP COLUMN sauna_ci_drift_probe' > /dev/null
+[[ $(psql_cmd sauna_admin sauna_atlas_replay -c "SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='facilities' AND column_name='sauna_ci_drift_probe'") == 1 ]]
+psql_cmd sauna_admin sauna_atlas_replay -c 'ALTER TABLE public.facilities DROP COLUMN sauna_ci_drift_probe' > /dev/null
 check_diff
 # Column parity alone would not prove that Atlas CE still inspects exclusion
 # constraints after an upgrade. Detect its removal without silently repairing it.
-exclusion_definition=$(psql_cmd sauna_admin sauna_ci_replay -c "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid='public.inventory_claims'::regclass AND conname='inventory_claim_no_overlap' AND contype='x'")
+exclusion_definition=$(psql_cmd sauna_admin sauna_atlas_replay -c "SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid='public.inventory_claims'::regclass AND conname='inventory_claim_no_overlap' AND contype='x'")
 [[ -n $exclusion_definition ]]
-psql_cmd sauna_admin sauna_ci_replay -c 'ALTER TABLE public.inventory_claims DROP CONSTRAINT inventory_claim_no_overlap' > /dev/null
+psql_cmd sauna_admin sauna_atlas_replay -c 'ALTER TABLE public.inventory_claims DROP CONSTRAINT inventory_claim_no_overlap' > /dev/null
 "$atlas" schema diff --from "$target" --to "file://$run_dir/db/schema.sql" --dev-url "$dev" --exclude atlas_schema_revisions --format '{{ sql . }}' > "$run_dir/exclusion-drift.sql" 2> "$run_dir/exclusion-drift.log"
 [[ -s "$run_dir/exclusion-drift.sql" ]]
 grep -q inventory_claim_no_overlap "$run_dir/exclusion-drift.sql"
-[[ $(psql_cmd sauna_admin sauna_ci_replay -c "SELECT count(*) FROM pg_constraint WHERE conrelid='public.inventory_claims'::regclass AND conname='inventory_claim_no_overlap'") == 0 ]]
-psql_cmd sauna_admin sauna_ci_replay -c "ALTER TABLE public.inventory_claims ADD CONSTRAINT inventory_claim_no_overlap $exclusion_definition" > /dev/null
+[[ $(psql_cmd sauna_admin sauna_atlas_replay -c "SELECT count(*) FROM pg_constraint WHERE conrelid='public.inventory_claims'::regclass AND conname='inventory_claim_no_overlap'") == 0 ]]
+psql_cmd sauna_admin sauna_atlas_replay -c "ALTER TABLE public.inventory_claims ADD CONSTRAINT inventory_claim_no_overlap $exclusion_definition" > /dev/null
 check_diff
-psql_cmd sauna_admin sauna_ci_replay <<'SQL' > /dev/null
+psql_cmd sauna_admin sauna_atlas_replay <<'SQL' > /dev/null
 REVOKE CREATE ON SCHEMA public FROM PUBLIC, sauna_app;
 GRANT USAGE ON SCHEMA public TO sauna_app;
 GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO sauna_app;
 REVOKE ALL ON public.atlas_schema_revisions FROM sauna_app;
+REVOKE ALL ON public.workspace_employment_revocation_audit FROM PUBLIC, sauna_app;
+REVOKE ALL (claim_token, facility_id, user_id, revoked_at) ON public.workspace_employment_revocation_audit FROM PUBLIC, sauna_app;
+GRANT INSERT (claim_token, facility_id, user_id) ON public.workspace_employment_revocation_audit TO sauna_app;
 SQL
 count=0
 for file in "$run_dir"/db/tests/*.sql; do
     [[ -f $file && ! -L $file ]]
-    psql_cmd sauna_app sauna_ci_replay --file="$file" > "$run_dir/app-test.log" 2>&1
+    psql_cmd sauna_app sauna_atlas_replay --file="$file" > "$run_dir/app-test.log" 2>&1
     count=$((count + 1))
 done
 [[ $count -gt 0 ]]
 # Rolled-back fixture tests cannot leave synthetic business rows behind.
-[[ $(psql_cmd sauna_admin sauna_ci_replay -c 'SELECT (SELECT count(*) FROM public.facilities)+(SELECT count(*) FROM public.users)') == 0 ]]
-[[ $(psql_cmd sauna_admin sauna_ci_replay --command="$verify_sql") == 1 ]]
+[[ $(psql_cmd sauna_admin sauna_atlas_replay -c 'SELECT (SELECT count(*) FROM public.facilities)+(SELECT count(*) FROM public.users)') == 0 ]]
+# Run the actual retention SQL against three synthetic events after checking ownership refusal.
+retention_file="$run_dir/audit-retention-apply.sql"
+expect_retention_refusal() {
+    if psql_cmd "$1" "$2" --file="$retention_file" > "$run_dir/retention-refusal.log" 2>&1; then
+        return 1
+    fi
+    grep -Fq 'Refusing unowned disposable replay database' "$run_dir/retention-refusal.log"
+}
+expect_retention_refusal sauna_admin sauna_atlas_replay
+expect_retention_refusal sauna_admin sauna_ci_dev
+psql_cmd sauna_admin sauna_atlas_replay --command="COMMENT ON DATABASE sauna_atlas_replay IS 'an-unexpected-marker'" > /dev/null
+expect_retention_refusal sauna_admin sauna_atlas_replay
+psql_cmd sauna_admin sauna_atlas_replay --file="$run_dir/audit-retention-marker.sql" > /dev/null
+expect_retention_refusal sauna_app sauna_atlas_replay
+psql_cmd sauna_admin sauna_atlas_replay <<'SQL' > /dev/null
+INSERT INTO public.workspace_employment_revocation_audit (claim_token, facility_id, user_id, revoked_at)
+SELECT ('46000000-0000-0000-0000-00000000000' || id)::uuid,
+       '46000000-0000-0000-0000-000000000004',
+       '46000000-0000-0000-0000-000000000005',
+       statement_timestamp() - make_interval(days => age)
+FROM (VALUES (1, 60), (2, 40), (3, 5)) seed(id, age);
+SQL
+retention_count() {
+    psql_cmd sauna_admin sauna_atlas_replay --quiet --file="$1"
+}
+audit_remaining() {
+    psql_cmd sauna_admin sauna_atlas_replay --command="SELECT string_agg(right(claim_token::text, 1), ',' ORDER BY revoked_at) FROM public.workspace_employment_revocation_audit"
+}
+[[ $(retention_count "$run_dir/audit-retention-preview.sql") == 1 && $(audit_remaining) == '1,2,3' ]]
+[[ $(retention_count "$retention_file") == 1 && $(audit_remaining) == '2,3' ]]
+[[ $(retention_count "$retention_file") == 1 && $(audit_remaining) == 3 ]]
+[[ $(retention_count "$retention_file") == 0 && $(audit_remaining) == 3 ]]
+[[ $(psql_cmd sauna_admin sauna_atlas_replay --command="$verify_sql") == 1 ]]
 [[ $(psql_cmd sauna_admin sauna_ci_dev --command="$verify_sql") == 1 ]]
-printf 'PostgreSQL 18 peer replay passed: fresh apply, unchanged reapply journal, schema parity, retained drift detection, %s restricted-role SQL suites\n' "$count"
+printf 'PostgreSQL 18 peer replay passed: fresh apply, unchanged reapply journal, schema parity, retained drift detection, %s restricted-role SQL suites, guarded audit retention\n' "$count"

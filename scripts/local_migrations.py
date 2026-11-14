@@ -11,12 +11,12 @@ import subprocess
 import tempfile
 
 import local_postgres as db
+from local_employment_audit import MARKER
 from pglast import parse_sql, enums
 
 ROOT = Path(__file__).resolve().parents[1]
 ATLAS = ROOT.parent / '.tools/atlas/atlas'
 MIGRATIONS = ROOT / 'db/migrations'
-MARKER = 'sauna-local-atlas-v1'
 SCRATCH = {'sauna_atlas_dev', 'sauna_atlas_replay'}
 TABLES = ('facilities', 'users', 'facility_memberships', 'products', 'reservations', 'reservation_items', 'webauthn_challenges', 'passkey_accounts', 'passkey_registration_intents', 'passkey_credentials', 'auth_sessions', 'passkey_management_intents', 'product_offerings', 'inventory_resources', 'inventory_product_resources', 'inventory_claims', 'workspace_employment_rechecks', 'workspace_employment_revocation_audit')
 
@@ -112,8 +112,16 @@ def atlas(args, config):
 
 def grant_app(database='sauna_local'):
     db.configure_role()
-    names = ', '.join('public.' + name for name in TABLES)
-    db.query(f'REVOKE CREATE ON SCHEMA public FROM PUBLIC, sauna_app; GRANT USAGE ON SCHEMA public TO sauna_app; GRANT SELECT, INSERT, UPDATE, DELETE ON {names} TO sauna_app;', database=database)
+    audit = 'public.workspace_employment_revocation_audit'
+    names = ', '.join('public.' + name for name in TABLES if 'public.' + name != audit)
+    db.query(f'''BEGIN;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC, sauna_app;
+GRANT USAGE ON SCHEMA public TO sauna_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON {names} TO sauna_app;
+REVOKE ALL ON {audit} FROM PUBLIC, sauna_app;
+REVOKE ALL (claim_token, facility_id, user_id, revoked_at) ON {audit} FROM PUBLIC, sauna_app;
+GRANT INSERT (claim_token, facility_id, user_id) ON {audit} TO sauna_app;
+COMMIT;''', database=database)
 
 
 def check_drift(config):

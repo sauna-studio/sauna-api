@@ -16,6 +16,7 @@ import urllib.request
 import uuid
 
 import postgresql_prerequisites as prerequisites
+from local_employment_audit import MARKER, retention_sql
 
 ROOT = Path(__file__).resolve().parents[1]
 IMAGE = 'docker.io/library/postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4'
@@ -156,6 +157,9 @@ def stage_inputs(directory, snapshot, atlas=None):
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(content)
         destination.chmod(0o644)
+    (directory / 'audit-retention-marker.sql').write_text(f"COMMENT ON DATABASE sauna_atlas_replay IS '{MARKER}';")
+    (directory / 'audit-retention-preview.sql').write_text(retention_sql(30, 1, False))
+    (directory / 'audit-retention-apply.sql').write_text(retention_sql(30, 1, True))
     (directory / 'prerequisites-bootstrap.sql').write_text(prerequisites.BOOTSTRAP_SQL)
     (directory / 'prerequisites-verify.sql').write_text(prerequisites.VERIFY_SQL)
     if atlas is not None:

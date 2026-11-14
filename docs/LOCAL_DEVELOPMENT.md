@@ -98,12 +98,13 @@ ContainerfileのLinuxテスト工程にはDBパスワードを渡さないため
 
 ## 社員資格の定期再確認
 
-社員確認の対象として登録された施設・ユーザーの組だけをDBキューで扱います。ワーカーは1件ずつ取得し、5秒間隔で次の照会を行います。照会不能なら5分後、適格なら1時間後に再確認します。非適格が確定した場合は、取得した紐付け・施設ロール・リースが現在も有効であることを確認し、施設ロールの失効と監査行を同じ更新で保存します。同時更新で行がロックされている場合はリースの期限後に再確認します。PostgreSQLの行バージョンは短いリース中の変更検知に使います。他施設のロールと利用者セッションは維持します。監査に保存するのはSauna側の施設・ユーザーID、照会ID、失効時刻です。監査表の閲覧・更新権限と保持方針は [Issue #36](https://github.com/sauna-studio/sauna-api/issues/36) で扱います。
+社員確認の対象として登録された施設・ユーザーの組だけをDBキューで扱います。ワーカーは1件ずつ取得し、5秒間隔で次の照会を行います。照会不能なら5分後、適格なら1時間後に再確認します。非適格が確定した場合は、取得した紐付け・施設ロール・リースが現在も有効であることを確認し、施設ロールの失効と監査行を同じ更新で保存します。同時更新で行がロックされている場合はリースの期限後に再確認します。PostgreSQLの行バージョンは短いリース中の変更検知に使います。他施設のロールと利用者セッションは維持します。監査に保存するのはSauna側の施設・ユーザーID、照会ID、失効時刻です。本番での監査表の閲覧権限と保持期間は [Issue #36](https://github.com/sauna-studio/sauna-api/issues/36) で扱います。
 
-現行の起動設定はワーカーを登録しません。合成検証器を渡すSwift統合テストで、ワーカーから実PostgreSQLを経由し、失効後に対象施設のHTTPアクセスが拒否されることを確認できます。
+ワーカーは既定で停止しています。合成モードを起動するには、`SAUNA_LOCAL_EMPLOYMENT_RECHECK=synthetic-ineligible`、`SAUNA_LOCAL_AUTH=1`、`PGDATABASE=sauna_atlas_replay` を明示し、APIとDBの接続先をループバックに設定します。照会対象は、検証専用の固定ユーザーID・テナントID・グループIDの3つが一致する登録だけです。このモードは一致した登録に非適格を返すため、使い捨てDBで使います。監査の権限と削除方法は[ローカル監査手順](LOCAL_EMPLOYMENT_AUDIT.md)を参照してください。
 
 ```sh
 .venv/bin/python scripts/local_integration_db.py --filter WorkspaceEmployment
+.venv/bin/python scripts/local_integration_db.py --restrict-employment-audit --filter executableStartsSyntheticEmploymentWorkerAndExitsWithSIGTERM
 ```
 
 実Workspaceとの紐付け、対象登録、運用時の起動設定は [Issue #4](https://github.com/sauna-studio/sauna-api/issues/4) と [Issue #14](https://github.com/sauna-studio/sauna-api/issues/14) で扱います。

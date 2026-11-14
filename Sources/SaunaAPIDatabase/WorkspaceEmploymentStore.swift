@@ -30,6 +30,11 @@ package enum WorkspaceEmploymentOutcome: Sendable, Equatable {
     case ineligible
 }
 
+package enum WorkspaceEmploymentClaimScope: Sendable, Equatable {
+    case all
+    case synthetic
+}
+
 package enum WorkspaceEmploymentStoreError: Error {
     case invalidInterval
     case unavailable
@@ -42,7 +47,7 @@ package struct WorkspaceEmploymentStore: Sendable {
         self.client = client
     }
 
-    package func claimNextDue(leaseSeconds: Int) async throws -> WorkspaceEmploymentClaim? {
+    package func claimNextDue(leaseSeconds: Int, scope: WorkspaceEmploymentClaimScope = .all) async throws -> WorkspaceEmploymentClaim? {
         guard (1...3_600).contains(leaseSeconds) else { throw WorkspaceEmploymentStoreError.invalidInterval }
         do {
             let rows = try await client.query("""
@@ -52,6 +57,11 @@ package struct WorkspaceEmploymentStore: Sendable {
                     JOIN public.facility_memberships m USING (facility_id, user_id)
                     WHERE m.status = 'active' AND e.next_check_at <= clock_timestamp()
                       AND (e.claimed_until IS NULL OR e.claimed_until <= clock_timestamp())
+                      AND (\(scope == .all) OR (
+                          e.directory_user_id COLLATE "C" = 'fixture-sauna-employment-user'
+                          AND e.customer_id COLLATE "C" = 'fixture-sauna-employment-tenant'
+                          AND e.group_id COLLATE "C" = 'fixture-sauna-employment-group'
+                      ))
                     ORDER BY e.next_check_at, e.facility_id, e.user_id
                     LIMIT 1
                     FOR UPDATE OF e, m SKIP LOCKED

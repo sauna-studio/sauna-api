@@ -89,7 +89,9 @@ class IsolatedMigrationSafetyTests(unittest.TestCase):
             staged = root / 'stage'
             ci.stage_inputs(staged, snapshot)
             self.assertEqual(sorted(str(p.relative_to(staged)) for p in staged.rglob('*') if p.is_file()), [
-                'db/migrations/20261101000000_fixture.sql', 'db/migrations/atlas.sum', 'db/postgresql-prerequisites.json', 'db/schema.sql', 'db/tests/001_fixture.sql', 'prerequisites-bootstrap.sql', 'prerequisites-verify.sql', 'replay.sh'])
+                'audit-retention-apply.sql', 'audit-retention-marker.sql', 'audit-retention-preview.sql',
+                'db/migrations/20261101000000_fixture.sql', 'db/migrations/atlas.sum', 'db/postgresql-prerequisites.json',
+                'db/schema.sql', 'db/tests/001_fixture.sql', 'prerequisites-bootstrap.sql', 'prerequisites-verify.sql', 'replay.sh'])
             # Later source edits cannot change already validated snapshot bytes.
             (root / 'db/schema.sql').write_text('CHANGED AFTER SNAPSHOT')
             self.assertEqual((staged / 'db/schema.sql').read_text(), 'CREATE TABLE fixture(id int);')

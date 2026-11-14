@@ -13,10 +13,11 @@ package struct WorkspaceEmploymentScheduler: Service {
     /// independently limits when its result can be applied.
     package init(
         store: WorkspaceEmploymentStore,
+        scope: WorkspaceEmploymentClaimScope = .all,
         verify: @escaping @Sendable (WorkspaceEmploymentClaim) async -> WorkspaceEmploymentOutcome
     ) {
         self.init(
-            claim: { try await store.claimNextDue(leaseSeconds: 60) },
+            claim: { try await store.claimNextDue(leaseSeconds: 60, scope: scope) },
             verify: verify,
             finish: { claim, outcome in
                 let retry = switch outcome {

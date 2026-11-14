@@ -1,6 +1,7 @@
 import Foundation
 import Hummingbird
 import HummingbirdTesting
+import PostgresNIO
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
@@ -131,6 +132,117 @@ private func waitForExit(_ process: Process) async throws {
         try await Task.sleep(for: .milliseconds(20))
     }
     process.waitUntilExit()
+}
+
+extension WorkspaceEmploymentSchedulerTests {
+    @Test(arguments: [
+        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "PGDATABASE": "sauna_atlas_replay"],
+        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_local"],
+        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_atlas_replay", "BIND_HOST": "0.0.0.0"],
+        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "synthetic-ineligible", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_atlas_replay", "PGHOST": "192.0.2.1"],
+        ["SAUNA_LOCAL_EMPLOYMENT_RECHECK": "unknown-mode", "SAUNA_LOCAL_AUTH": "1", "PGDATABASE": "sauna_atlas_replay"],
+    ])
+    func unsafeEmploymentWorkerConfigurationExits(environment: [String: String]) async throws {
+        let process = Process()
+        process.executableURL = try executableURL()
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false,
+                                                attributes: [.posixPermissions: 0o700])
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let passwordFile = directory.appendingPathComponent("synthetic")
+        try Data("not-a-real-database-password".utf8).write(to: passwordFile)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: passwordFile.path)
+        var childEnvironment = environment
+        // A valid local file ensures an earlier failure cannot be mistaken for
+        // rejection of a nonisolated database or unsupported worker mode.
+        childEnvironment["PGPASSWORD_FILE"] = passwordFile.path
+        childEnvironment["PORT"] = String(Int.random(in: 49152...65535))
+        process.environment = childEnvironment
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        defer {
+            if process.isRunning {
+                _ = kill(process.processIdentifier, SIGKILL)
+                process.waitUntilExit()
+            }
+        }
+        try await waitForExit(process)
+        #expect(process.terminationReason == .exit)
+        #expect(process.terminationStatus != 0)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["PGPASSWORD_FILE"] != nil, "Requires isolated PostgreSQL fixture database"))
+    func executableStartsSyntheticEmploymentWorkerAndExitsWithSIGTERM() async throws {
+        try await withFacilityHTTPFixture { fixture in
+            let facilities = [fixture.facilityA, fixture.emptyFacility]
+            let user = fixture.managerID
+            _ = try await fixture.pool.query("""
+                INSERT INTO public.workspace_employment_rechecks
+                    (facility_id, user_id, directory_user_id, customer_id, group_id, next_check_at)
+                VALUES
+                    (\(facilities[0]), \(user), 'fixture-sauna-employment-user', 'fixture-sauna-employment-tenant', 'fixture-sauna-employment-group', now()),
+                    (\(facilities[1]), \(user), 'ordinary-directory-id', 'ordinary-tenant-id', 'ordinary-group-id', now() - interval '1 hour')
+                """).collect()
+
+            let process = Process()
+            process.executableURL = try executableURL()
+            let port = Int.random(in: 49152...65535)
+            var environment = ProcessInfo.processInfo.environment.filter { ["PGPASSWORD_FILE", "PGHOST", "PGPORT", "PGUSER"].contains($0.key) }
+            environment["PORT"] = String(port)
+            environment["BIND_HOST"] = "127.0.0.1"
+            environment["PGDATABASE"] = "sauna_atlas_replay"
+            environment["SAUNA_LOCAL_AUTH"] = "1"
+            environment["SAUNA_LOCAL_EMPLOYMENT_RECHECK"] = "synthetic-ineligible"
+            process.environment = environment
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            try process.run()
+            defer {
+                if process.isRunning {
+                    _ = kill(process.processIdentifier, SIGKILL)
+                    process.waitUntilExit()
+                }
+            }
+
+            let session = makeProbeSession()
+            defer { session.invalidateAndCancel() }
+            let health = try #require(URL(string: "http://127.0.0.1:\(port)/health"))
+            try await waitForReadiness(
+                childState: {
+                    if process.isRunning { return .running }
+                    return .exited(status: process.terminationStatus)
+                },
+                probe: {
+                    let rows = try await fixture.pool.query("""
+                        SELECT status FROM public.facility_memberships
+                        WHERE facility_id=\(facilities[0]) AND user_id=\(user)
+                        """)
+                    var revoked = false
+                    for try await status in rows.decode(String.self) { revoked = status == "revoked" }
+                    guard revoked else { return false }
+                    guard let (_, response) = try? await session.data(from: health) else { return false }
+                    return (response as? HTTPURLResponse)?.statusCode == 200
+                }
+            )
+            let ordinary = try await fixture.pool.query("""
+                SELECT m.status, e.claim_token IS NULL FROM public.facility_memberships m
+                JOIN public.workspace_employment_rechecks e USING (facility_id, user_id)
+                WHERE m.facility_id=\(facilities[1]) AND m.user_id=\(user)
+                """)
+            var observedOrdinary = false
+            for try await (status, unclaimed) in ordinary.decode((String, Bool).self) {
+                observedOrdinary = true
+                #expect(status == "active")
+                #expect(unclaimed)
+            }
+            #expect(observedOrdinary)
+            process.terminate()
+            try await waitForExit(process)
+            #expect(process.terminationReason == .exit)
+            #expect(process.terminationStatus == 0)
+        }
+    }
 }
 
 @Suite(.serialized)
