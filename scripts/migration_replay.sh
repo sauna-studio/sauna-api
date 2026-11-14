@@ -218,9 +218,32 @@ audit_remaining() {
     psql_cmd sauna_admin sauna_audit_sandbox --command="SELECT string_agg(right(claim_token::text, 1), ',' ORDER BY revoked_at) FROM public.workspace_employment_revocation_audit"
 }
 [[ $(retention_count "$run_dir/audit-retention-preview.sql") == 1 && $(audit_remaining) == '1,2,3' ]]
-[[ $(retention_count "$retention_file") == 1 && $(audit_remaining) == '2,3' ]]
+# Hold the oldest row in another transaction until the first batch completes.
+# The readiness marker must follow a successful row lock so this cannot pass
+# because the retention batch ran before its competing transaction.
+coproc AUDIT_LOCK {
+    psql_cmd sauna_admin sauna_audit_sandbox --quiet > "$run_dir/audit-lock.log" 2>&1
+}
+audit_lock_pid=$AUDIT_LOCK_PID
+audit_lock_input=${AUDIT_LOCK[1]}
+cat >&"$audit_lock_input" <<'SQL'
+BEGIN;
+SET LOCAL statement_timeout = '5s';
+SET LOCAL idle_in_transaction_session_timeout = '20s';
+SELECT claim_token FROM public.workspace_employment_revocation_audit
+ORDER BY revoked_at, claim_token LIMIT 1 FOR UPDATE \gset
+\echo audit-lock-acquired
+SQL
+audit_lock_deadline=$((SECONDS + 5))
+until grep -Fxq audit-lock-acquired "$run_dir/audit-lock.log"; do
+    [[ $SECONDS -lt $audit_lock_deadline ]] && kill -0 "$audit_lock_pid" 2>/dev/null || exit 1
+    sleep 0.05
+done
+[[ $(retention_count "$retention_file") == 1 && $(audit_remaining) == '1,3' ]]
+printf 'ROLLBACK;\n\\q\n' >&"$audit_lock_input"
+wait "$audit_lock_pid"
 [[ $(retention_count "$retention_file") == 1 && $(audit_remaining) == 3 ]]
 [[ $(retention_count "$retention_file") == 0 && $(audit_remaining) == 3 ]]
 [[ $(psql_cmd sauna_admin sauna_atlas_replay --command="$verify_sql") == 1 ]]
 [[ $(psql_cmd sauna_admin sauna_ci_dev --command="$verify_sql") == 1 ]]
-printf 'PostgreSQL 18 peer replay passed: fresh apply, unchanged reapply journal, schema parity, retained drift detection, %s restricted-role SQL suites, guarded audit retention\n' "$count"
+printf 'PostgreSQL 18 peer replay passed: fresh apply, unchanged reapply journal, schema parity, retained drift detection, %s restricted-role SQL suites, guarded audit retention with a locked row\n' "$count"
