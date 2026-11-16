@@ -187,3 +187,11 @@ PostgresNIOを`5722f49dad5eb951522afafa57320ad3f9ea69d2`から`1b9c2a873ee6c5dfa
 - 実DB fixtureは新しい所有VM/専用DBだけに投入。承認済みlocal passwordを同用途の私有ファイルから再利用し、値をargv/environmentへ入れず、新しい秘密値は生成していない。一時test utility adapterは復元、全所有VMは削除、既存Sauna DB/volumeは保持。自身の検証ログに承認済みpassword値が含まれないことも検査した。
 
 これはPostgresNIO driver経路の検証であり、Fluent/PostgresKit全体の動作保証ではない。write失敗で完了することは、COMMIT応答喪失時の未commitや自動retryの安全性を保証しない。上流PR698の拡張採用・公式release・fork/identity解消は未完了のためIssue48は開いたままとする。料金仕様Issue18は保留を維持する。API採用PRの独立Review/Security・最新GitHub Codex/CI結果はPRに記録する。
+
+### 2026-11-17 merged upstream WebAuthn migration
+
+Package.swift now pins brokenhandsio/swift-webauthn merge commit `38b75016ed3550c7b08b70af05538a807f507285` from upstream PR128 and swift-cbor 0.3.0 (`6ee2fa73aa6470fd1b6364757b88fdb2602ca4f5`). Only those two identities change in the 127-pin lock. The temporary WebAuthn compatibility fork is no longer a dependency. Issue49 remains open for upstream release adoption and the separate excludeCredentials adapter.
+
+Native Swift 6.4.4 `swift build --build-tests --force-resolved-versions --jobs 2` passed. `scripts/local_integration_db.py` ran frozen Swift tests against a new owned PostgreSQL 18 VM on loopback:55433: the four bundles reported 45, 41, 35, and 5 tests, with one restricted-worker test skipped under the full-suite fixture privileges. A separate `--restrict-employment-audit` run passed that worker test with the restricted audit privileges. Both VMs were removed by the helper. The user explicitly approved a dedicated local DB password fixture for this run; its value stayed in the ignored owner-only private file and was not logged.
+
+Signed P256 registration/assertion, duplicate-CBOR rejection, and the new trailing-attestation/COSE-item rejection test passed. OpenAPI validation passed with four response examples. Python script tests passed 54 tests with one platform skip. `scripts/validate_identity_boundary.py` passed: external type access succeeds while initializer, JSON decoding, and management-only verification remain rejected. No schema, migration, production credentials, RP/origin/UV policy, or public verified-result initializer changed. Browser flows were not rerun for this dependency migration. Historical browser results above do not establish current browser validation.

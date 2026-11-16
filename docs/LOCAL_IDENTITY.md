@@ -18,7 +18,7 @@ RPは`localhost`、originはcustomer=`http://localhost:5173` / staff=`http://loc
 
 clientDataの未知propertyは[WebAuthn Level 3 CollectedClientData](https://www.w3.org/TR/webauthn-3/#dictdef-collectedclientdata)に従って許容する。既知security fieldは厳格に検査し、署名検証には未知propertyも含む元のclientDataJSON byte列を使用する。再serializationや未知propertyの除去は行わない。
 
-外部libraryは最新ユーザー指示に従い、[上流WebAuthn PR128](https://github.com/brokenhandsio/swift-webauthn/pull/128/)を基点とする自前forkとSQL packagesを採用する。直接のCBOR利用もbrokenhandsio/swift-cborのproduct `CBOR`、安定tag0.2.0へ統一する。入力全体を消費するdecoderへmaximumDepth16と重複map key拒否を明示し、既存の狭いframing制限も維持する。旧SwiftCBOR/上流PR120由来forkの検証は履歴として保持し、新グラフの検証に流用しない。PostgresNIOのclosed-channel query promise修正は[専用fork PR1](https://github.com/sauna-studio/postgres-nio/pull/1)で検証・merge済みで、[上流DRAFT PR698](https://github.com/vapor/postgres-nio/pull/698)へ最小差分を提出している。上流での採用済み修正とは表現しない。最終的な依存revisionの根拠はPackage.swift / Package.resolvedとADRに記録する。[以前の隔離評価](WEBAUTHN_EVALUATION.md)はその時点の履歴であり、最終依存による検証の代替にしない。
+外部libraryは最新ユーザー指示に従い、[上流WebAuthn PR128](https://github.com/brokenhandsio/swift-webauthn/pull/128/)のマージcommitを直接固定し、SQL packagesを採用する。直接のCBOR利用もbrokenhandsio/swift-cborのproduct `CBOR`、安定tag0.3.0へ統一する。入力全体を消費するdecoderへmaximumDepth16と重複map key拒否を明示し、既存の狭いframing制限も維持する。旧SwiftCBOR/上流PR120由来forkの検証は履歴として保持し、新グラフの検証に流用しない。PostgresNIOのclosed-channel query promise修正は[専用fork PR1](https://github.com/sauna-studio/postgres-nio/pull/1)で検証・merge済みで、[上流DRAFT PR698](https://github.com/vapor/postgres-nio/pull/698)へ最小差分を提出している。上流での採用済み修正とは表現しない。最終的な依存revisionの根拠はPackage.swift / Package.resolvedとADRに記録する。[以前の隔離評価](WEBAUTHN_EVALUATION.md)はその時点の履歴であり、最終依存による検証の代替にしない。
 
 ## Challenge・session lifecycle
 

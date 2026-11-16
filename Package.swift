@@ -26,7 +26,7 @@ let package = Package(
         .library(name: "SaunaAPIIdentity", targets: ["SaunaAPIIdentity"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/brokenhandsio/swift-cbor.git", exact: "0.2.0"),
+        .package(url: "https://github.com/brokenhandsio/swift-cbor.git", exact: "0.3.0"),
         .package(url: "https://github.com/apple/swift-nio.git", exact: "2.104.0"),
         .package(url: "https://github.com/apple/swift-http-types", exact: "1.8.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", exact: "2.13.0"),
@@ -40,8 +40,7 @@ let package = Package(
         .package(url: "https://github.com/valkey-io/valkey-swift.git", from: "1.3.0"),
         .package(url: "https://github.com/swift-otel/swift-otel.git", from: "1.0.0", traits: ["OTLPHTTP"]),
         .package(url: "https://github.com/apple/swift-distributed-tracing.git", exact: "1.7.3"),
-        // Based on upstream PR #128, with only reviewed compatibility fixes.
-        .package(url: "https://github.com/zunda-pixel/swift-webauthn.git", revision: "0d1a4e6408f0a611a98b408ab6a465e40303ac7c"),
+        .package(url: "https://github.com/brokenhandsio/swift-webauthn.git", revision: "38b75016ed3550c7b08b70af05538a807f507285"),
         .package(url: "https://github.com/zunda-pixel/UUIDV7.git", branch: "replace-to-swift-testing"),
         .package(url: "https://github.com/zunda-pixel/swift-postgresql.git", branch: "fix-postgresql-closure-lifetime", traits: ["PostgresNIO"]),
         .package(url: "https://github.com/swift-compositions/swift-sql.git", branch: "main"),
