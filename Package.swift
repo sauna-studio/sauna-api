@@ -39,7 +39,7 @@ let package = Package(
       from: "1.0.0",
       traits: ["OTLPHTTP"]
     ),
-    .package(url: "https://github.com/brokenhandsio/swift-webauthn.git", exact: "1.0.0-beta.3"),
+    .package(url: "https://github.com/brokenhandsio/swift-webauthn.git", from: "1.0.0-beta.3"),
     .package(
       url: "https://github.com/swift-compositions/swift-postgresql.git",
       revision: "837a5c0d43b495372c17de08d5f187f6819601b0"

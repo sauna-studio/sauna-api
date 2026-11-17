@@ -236,3 +236,17 @@ Adopted official swift-compositions/swift-postgresql at fixed revision837a5c0d43
 Native frozen `swift build` and `swift build --build-tests` passed with the strict test settings preserved. Existing test imports and one `any Error` annotation were corrected. The initial full run exposed a redundant synchronous Process.waitUntilExit after isRunning was false; sampling identified a blocked test-runner worker outside the polling deadline. Removing the two post-exit waits restored bounded polling (Issue88), without removing owned-child cleanup or exit assertions.
 
 The final new owned PostgreSQL18 full run passed all bundles (Server49, Identity41, Database35, Contract5); the restricted worker was skipped under full-fixture privileges, then passed in a separate restricted VM (one test, no skips). Both VMs were cleaned up. New middleware tests cover empty error body/headers, canonical error status, cancellation and returned body/cookie preservation. The original live406 and typed SQL/real-DB auth/facility tests passed. OpenAPI schema/four examples and Python54 tests passed (one platform skip). Strict format checks on the formatted files and diff checks passed. Independent Review/Security Review found no unresolved issues. Browser, migration replay and local Linux-container replacement were not run; CI verification is recorded on PR87.
+
+
+## 2026-11-17 WebAuthn range after upstream tag removal (initial 112-pin graph)
+
+Upstream Issue135 is closed with the maintainer reporting the conflicting tag deleted; live remote tags contain beta.3 at `38b75016ed3550c7b08b70af05538a807f507285` and no beta-2. Package.swift returns from the temporary exact pin to `from: "1.0.0-beta.3"`. Ordinary `swift package resolve` preserves all112 pin objects and leaves Package.resolved unchanged. An independently reviewed fresh manifest with this requirement and no lock also resolves beta.3 and brokenhandsio/swift-cbor0.3.0 without old SwiftCBOR.
+
+`swift format lint --strict Package.swift`, `swift build --force-resolved-versions`, and the full `swift test --force-resolved-versions` via `.venv/bin/python scripts/local_integration_db.py` passed. The new owned PostgreSQL18 VM passed all four bundles (49/41/35/5); the restricted-worker test is skipped in the full-fixture VM and passed separately in a second owned VM (one test, no skips); both owned VMs were cleaned up. No authentication source, schema, or resolved dependency revision changed. Independent review found no issues; latest GitHub CI/Codex results remain pending.
+
+
+## 2026-11-17 regenerated 135-pin graph
+
+User commit c49488b regenerates the lock: swift-sql changes from `6b32968758f840c76742d2a8b08d473da16c263c` to `18b0dcc3bff13d25bbe0e6d36defe59192d341c3`, adding23 test-support pins for135 total. Every other existing pin, including WebAuthn beta.3 at `38b75016`, remains unchanged. These SQL test-support dependencies do not add edges to Sauna's selected production products; fixed-revision Apache-2.0 licenses and SQL's unchanged MIT license were checked independently.
+
+The regenerated graph passed `swift build --force-resolved-versions` and the full Swift tests through a fresh owned PostgreSQL18 VM (49/41/35/5). The restricted-worker test is skipped under full-fixture privileges and passed separately in a second owned VM (one test, no skips); both owned VMs were cleaned up. Independent Review and Security Review found no issues in the dependency delta or unchanged SQL binding/session/facility boundaries. Latest GitHub CI/Codex must still pass for the final head before merging.

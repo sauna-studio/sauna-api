@@ -12,7 +12,9 @@ SQL描画は公式[swift-compositions/swift-postgresql@837a5c0](https://github.c
 
 OpenAPI Runtime1.13.4の406 ProblemDetailsが入力を反映するため、PublicErrorMiddlewareでthrowされたエラーは400...599のstatus codeだけを標準Statusへ変換し、body/headerを返さない。未知エラーは空500、キャンセルは伝播する。正常returnされたtyped503・認証problem・cookieは保持する。これは依存の旧版固定ではなく、Saunaの公開応答policyである。
 
-WebAuthnは上流[Issue135](https://github.com/brokenhandsio/swift-webauthn/issues/135)のタグ削除待ちで`exact: "1.0.0-beta.3"`を維持する。PostgresNIO修正forkも維持する。SQL旧版lock/Runtime旧版への一時復元は以下の履歴であり、現在のgraphはPackage.swift/Package.resolvedを参照する。[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)で移行と検証結果を追跡する。
+追加のlock再生成でswift-sqlを`18b0dcc3bff13d25bbe0e6d36defe59192d341c3`へ更新した。上流のSQL Test Supportが新しいtest library群へ移行したため23pin増え、graphは135pinとなる。追加packageは各固定revisionのApache-2.0ライセンスを確認済み。Saunaが選ぶSQL / SQL Macros / SQL Foundation Integrationのproduction targetへ依存edgeは追加されず、認証SQLのbind・transaction境界も変更しない。他の既存pinは維持する。
+
+WebAuthnは上流[Issue135](https://github.com/brokenhandsio/swift-webauthn/issues/135)で競合する`1.0.0-beta-2`タグが削除されたため、`from: "1.0.0-beta.3"`へ戻す。lockはPR128を含む`38b75016ed3550c7b08b70af05538a807f507285`を維持する。PostgresNIO修正forkも維持する。SQL旧版lock/Runtime旧版への一時復元は以下の履歴であり、現在のgraphはPackage.swift/Package.resolvedを参照する。[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)で移行と検証結果を追跡する。
 
 ## Historical 2026-11-17 manifest cleanup and compatible locks
 
@@ -20,7 +22,7 @@ WebAuthnは上流[Issue135](https://github.com/brokenhandsio/swift-webauthn/issu
 
 [Issue86](https://github.com/sauna-studio/sauna-api/issues/86)でSQL依存の互換性を追跡する。swift-postgresql `e5dca9dca136f5dd646bc98e2f3cdf1090430e26` の旧Reader/Database witnessはISO9075 `86e897d6939562fc13a02ed443e3bf110e311821`のgeneric Thrown/Failure要件を満たさない。当時はISO9075 `a8e0f3223cd0046adbd8545e7a290f61c12f6048`、SQL `76b61c7adfa3159dba5353a8f8b05110112d0050` の互換組合せへ戻して検証した。現在のユーザー更新lockではこの2pinが更新されており、今回のWebAuthn固定では変更していない。manifestのrevision指定とtargeted revision resolveは下位packageのmain指定と競合するため採用しない。依存更新時は既存の互換stateを保持し、graph整理後もこの2 stateが一致することを確認する。無制約の全branch更新を合格済みと扱わない。
 
-WebAuthnはtag順序制約のためmanifestを`exact: "1.0.0-beta.3"`へ固定し、`38b75016ed3550c7b08b70af05538a807f507285`を保持する。[上流Issue135](https://github.com/brokenhandsio/swift-webauthn/issues/135)で`1.0.0-beta-2`タグ削除を依頼した。削除後、通常resolveが旧版を選ばないこととbuild/testを確認して`from:`へ戻す。旧beta-2とSwiftCBORへ戻っていないことを確認する。検証は `swift build --force-resolved-versions` / `swift test --force-resolved-versions` と使い捨てPostgreSQL18で実行する。
+当時WebAuthnはtag順序制約のためmanifestを`exact: "1.0.0-beta.3"`へ固定し、`38b75016ed3550c7b08b70af05538a807f507285`を保持する。[上流Issue135](https://github.com/brokenhandsio/swift-webauthn/issues/135)で`1.0.0-beta-2`タグ削除を依頼した。Issue135の対応で競合タグは削除済みで、現在は`from:`へ戻している。通常resolveとbuild/testで旧beta-2とSwiftCBORへ戻っていないことを確認する。検証は `swift build --force-resolved-versions` / `swift test --force-resolved-versions` と使い捨てPostgreSQL18で実行する。
 
 恒久対応はclosure lifetime修正を維持したPostgreSQL adapterの新protocol対応を採用し、SQL/ISO9075を一緒に更新して通常resolve、frozen build/test、TypedSQLAdapterTestsと実DB統合を通すこと。依存更新と上流対応を再確認の契機とし、保持制約が不要になった時点でIssue86を解消する。
 
@@ -42,7 +44,7 @@ When the local exporter is removed or replaced, remove its bootstrap and the unu
 
 The selected WebAuthn source is now merged [upstream PR #128](https://github.com/brokenhandsio/swift-webauthn/pull/128), merge commit `38b75016ed3550c7b08b70af05538a807f507285`. Package.swift declares the official release with `from: "1.0.0-beta.3"`, replacing the temporary consumer fork. Package.resolved locks that release to the same merge commit; the manifest allows compatible versions below 2.0.0. Upstream incorporates Crypto 5 support, standard-library Base64/hex helpers and safe byte conversions; no consumer compatibility patch or public verified-result initializer is carried forward. [Issue49](https://github.com/sauna-studio/sauna-api/issues/49) continues to track the separate excludeCredentials adapter and remaining migration verification.
 
-The upstream also has a differently named tag, `1.0.0-beta-2`. SwiftPM orders it above `1.0.0-beta.3`: an unqualified resolve selected the old `030acd1` implementation and old SwiftCBOR 0.6.0 in a local reproduction. Regenerate this dependency with `swift package resolve swift-webauthn --version 1.0.0-beta.3`, retain Package.resolved, and use `--force-resolved-versions` for builds/tests. The intended lock has 127 pins, WebAuthn `1.0.0-beta.3` at `38b75016`, and no old SwiftCBOR. [Issue49](https://github.com/sauna-studio/sauna-api/issues/49) tracks this resolution constraint until a correctly ordered compatible upstream release can be adopted and an unqualified resolve no longer selects the legacy implementation. Do not silently accept unrelated pin changes during regeneration.
+Upstream removed the conflicting `1.0.0-beta-2` tag in [Issue135](https://github.com/brokenhandsio/swift-webauthn/issues/135). The temporary exact pin is removed; use ordinary `swift package resolve` and retain Package.resolved. WebAuthn remains `1.0.0-beta.3` at `38b75016`, with brokenhandsio/swift-cbor and no old SwiftCBOR. Avoid unrelated pin changes during regeneration.
 
 The directly used CBOR product is pinned to brokenhandsio/swift-cbor **0.3.0**, matching the merged WebAuthn minimum. The existing bounded framing, maximumDepth16, duplicate-key rejection, signature/UV/RP/origin checks and typed consumer verification results are retained. Old SwiftCBOR is absent from the graph. Historical fork checks below describe their original revisions and do not validate this migration.
 
@@ -52,7 +54,7 @@ swift-postgresqlはユーザー指定`fix-postgresql-closure-lifetime`とPostgre
 
 ## 検証
 
-Use `swift package resolve` and `swift test --force-resolved-versions` when changing actual dependencies. The current catalogue has 127 resolved pins. Historical test counts below apply to their recorded revisions. Validate current changes against the latest head.
+Use `swift package resolve` and `swift test --force-resolved-versions` when changing actual dependencies. The current graph has 135 resolved pins. Historical test counts below apply to their recorded revisions. Validate current changes against the latest head.
 
 For documentation-only corrections, validate locked-source/license evidence, links, repository policy and diff. Dependency changes also require the current graph's application build/tests. Database integration tests require the approved private password file; an unconfigured skip is not a successful database check.
 
