@@ -16,7 +16,7 @@ Hummingbirdのhealth/versionに加え、ローカルPasskey登録・署名/UVロ
 
 契約の正本は [openapi.yaml](Sources/SaunaAPIContract/openapi.yaml) です。`GET /health` はDB readinessではなくAPIのlivenessを表す固定値、`GET /version` は公開API版とアプリrelease版のみです。両方とも認証不要で、成功は`application/json`、利用不能は固定メッセージの`application/problem+json`を定義します。ソースrevision・hostname・環境・依存サービスの状態・例外詳細は返しません。契約のexamplesは実装の稼働状態や実releaseを示すものではありません。
 
-Swift OpenAPI Generator 1.14.3がtypes/server interfaceをbuild時に生成し、Runtime 1.13.3とともにコンパイルします。生成物はコミットしません。`Package.resolved`で推移依存も固定します。DTOのCodable処理だけでJSON Schemaの全制約が実行時に検証されるとは限らないため、HTTP実装時も出力制約と情報非公開を検証してください。
+Swift OpenAPI Generator 1.14.4がtypes/server interfaceをbuild時に生成し、Runtime 1.13.4とともにコンパイルします。生成物はコミットしません。`Package.resolved`で推移依存も固定します。DTOのCodable処理だけでJSON Schemaの全制約が実行時に検証されるとは限らないため、HTTP実装時も出力制約と情報非公開を検証してください。
 
 Swift 6.4.2 / Python 3.11以上で実行:
 
@@ -33,7 +33,7 @@ macOS標準の`python3`が古い場合は3.11以上のPythonを明示指定し�
 
 ## Local HTTP server
 
-Hummingbird 2.28.1 / OpenAPI Hummingbird 2.1.0をexactで指定しています。`SaunaAPIServer`が生成APIProtocolを実装し、実行可能な`SaunaAPI`が設定の検証とサービスの起動・終了を担当します。
+Hummingbird / OpenAPI Hummingbirdは`from:`で指定し、現在のlockfileは2.28.1 / 2.1.0です。`SaunaAPIServer`が生成APIProtocolを実装し、実行可能な`SaunaAPI`が設定の検証とサービスの起動・終了を担当します。
 
 ```sh
 swift build --force-resolved-versions

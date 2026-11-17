@@ -1,3 +1,5 @@
+import PostgresNIO
+import NIOCore
 import Foundation
 import HTTPTypes
 import HummingbirdTesting

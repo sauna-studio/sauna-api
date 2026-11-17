@@ -1,3 +1,4 @@
+import HTTPTypes
 import Foundation
 import Hummingbird
 import HummingbirdTesting
@@ -31,7 +32,7 @@ private enum ProbeMetadata: Equatable {
     case invalidResponse
 }
 
-private func safeProbeMetadata(_ error: Error) -> ProbeMetadata {
+private func safeProbeMetadata(_ error: any Error) -> ProbeMetadata {
     guard let error = error as? URLError else { return .otherTransport }
     switch error.code {
     case .cannotConnectToHost: return .cannotConnectToHost
@@ -131,7 +132,6 @@ private func waitForExit(_ process: Process) async throws {
         guard clock.now < deadline else { throw SmokeError.shutdownTimedOut }
         try await Task.sleep(for: .milliseconds(20))
     }
-    process.waitUntilExit()
 }
 
 extension WorkspaceEmploymentSchedulerTests {
@@ -273,7 +273,6 @@ struct ProcessSmokeTests {
             try await waitForReadiness(
                 childState: {
                     if process.isRunning { return .running }
-                    process.waitUntilExit()
                     return .exited(status: process.terminationStatus)
                 },
                 probe: {
