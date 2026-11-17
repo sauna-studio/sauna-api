@@ -54,7 +54,7 @@ Issues無効のforkでは、設定を変更せず利用側リポジトリのIssu
 
 Secrets、トークン、個人情報、実顧客データをコード・ログ・Issue・PRに残さない。認証情報の値を出力しない。施設IDは信頼できるセッションと権限から検証し、全読み書きで施設境界を守る。金額は通貨と最小単位の整数で扱い、クライアントの価格を信頼しない。予約はDBトランザクション・制約・競合テストで過剰予約を防ぐ。Stripe webhookは署名と冪等性を検証し、決済成功をブラウザの戻り値で確定しない。
 
-Google APIは最小scopeを使い、Domain-wide delegation・組織全体の権限・課金リソース・本番デプロイは明示承認を得る。OpenTelemetryにPII・認証情報を含めない。Workflowは最小permissions、外部Actionsは完全なcommit SHA固定、checkoutの資格情報を永続化しない。PRの未信頼コードを`pull_request_target`で実行しない。
+Google APIは最小scopeを使い、Domain-wide delegation・組織全体の権限・課金リソースは明示承認を得る。本番デプロイ自体は都度の明示承認を求めず実行してよい。既存の認証・権限設定、CI・レビュー条件は維持する。OpenTelemetryにPII・認証情報を含めない。Workflowは最小permissions、外部Actionsは完全なcommit SHA固定、checkoutの資格情報を永続化しない。PRの未信頼コードを`pull_request_target`で実行しない。
 
 ## MCP・Skills
 
@@ -64,7 +64,7 @@ Google APIは最小scopeを使い、Domain-wide delegation・組織全体の権�
 
 `codex/`ブランチとPRを使い、`main`へ直接pushしない。既存変更・リポジトリ・ライセンスを上書きしない。必要なGitHub Issues/Projectsへの更新以外の他者宛メッセージは明示指示がない限り送信しない。Issueは横断Projectへ追加し、受け入れ条件と実際の依存関係を記録する。秘密の脆弱性は公開Issueで扱わずSECURITY.mdに従う。
 
-PRには関連Issue、何が変わるか、実行したチェックと結果、独立Review/Security Reviewの結果、既知の制限を記録する。required checksをskipで満たしたように装わない。Releasesはテスト済みcommitと変更点を持ち、Environmentsは開発・検証・本番の承認境界を分ける。Packagesは配布の必要が生じたときだけ使う。
+PRには関連Issue、何が変わるか、実行したチェックと結果、独立Review/Security Reviewの結果、既知の制限を記録する。required checksをskipで満たしたように装わない。Releasesはテスト済みcommitと変更点を持ち、Environmentsは開発・検証・本番を分離する。Packagesは配布の必要が生じたときだけ使う。
 
 重要な設計変更は`sauna-docs`のADRに背景・決定・代替案・影響を残し、Wikiに索引を反映する。繰り返すバグや重要なレビュー指摘は必要に応じてこの規則と各repoのAGENTS.mdを更新する。共通規則の更新は他repoへの追従PRを作り、適用元のcommitを明示する。
 
@@ -145,3 +145,5 @@ credential追加・失効は既存keyのfresh署名/UVとsession/CSRFを要求�
 物理resourceと商品party capacityを混同しない。同じ実体をprivate/shared商品から参照し、施設/resource UUID・半開時刻区間・seat rangeのDB exclusionで競合を拒否する。sharedはcapacity内の単一seat、private/tentは全seat。resource lock待機後は新statementでsession/credential/施設role/enabledを検査する。解放済み履歴もcapacity FKを保持する。Swift DateはPostgresNIOのInt64 microsecond変換前にPG18の範囲と量子化後の非空区間を検証する。
 
 btree_gist1.8の保護schema前提は閉じたmanifestと固定bootstrap SQLで検証し、候補ファイルから任意superuser SQLを生成しない。manifest/schema検証を承認済みpassword読取より前に行う。Atlas CEの拡張lifecycle管理を主張せず、Issue64を参照する。既存DBへの拡張導入はこの使い捨て検証に含まれない。詳細はdocs/LOCAL_INVENTORY.md。
+
+本番デプロイ方針の適用元: `sauna-studio/.github@26dc72fb5a9e3f61fe8316447e2542d48bd4661e`。
