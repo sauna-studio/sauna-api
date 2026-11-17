@@ -39,7 +39,7 @@ let package = Package(
       from: "1.0.0",
       traits: ["OTLPHTTP"]
     ),
-    .package(url: "https://github.com/brokenhandsio/swift-webauthn.git", from: "1.0.0-beta.3"),
+    .package(url: "https://github.com/brokenhandsio/swift-webauthn.git", exact: "1.0.0-beta.3"),
     .package(
       url: "https://github.com/zunda-pixel/swift-postgresql.git",
       branch: "fix-postgresql-closure-lifetime", traits: ["PostgresNIO"]
@@ -94,7 +94,7 @@ let package = Package(
       name: "SaunaAPIContractTests",
       dependencies: [.target(name: "SaunaAPIContract")],
       swiftSettings: swiftSettings
-	),
+    ),
     .target(
       name: "SaunaAPIServer",
       dependencies: [

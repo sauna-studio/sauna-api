@@ -22,7 +22,7 @@ MemberImportVisibilityで見つかった欠落は定義moduleの直接importで�
 
 最新ユーザー指示により、将来用の未使用9 package宣言に加え、package/target間の推移依存の重複を削除した。残すtarget/product参照は明示し、必要なSQL macro・OpenAPI生成・test productとPostgresNIO修正forkの指定を保持する。以下のcatalogue対応表は削除前の履歴として保持する。現在の宣言はPackage.swiftを参照する。
 
-PostgreSQL adapterとISO9075のprotocol不整合により、SQL `76b61c7adfa3159dba5353a8f8b05110112d0050` / ISO9075 `a8e0f3223cd0046adbd8545e7a290f61c12f6048` の互換lockを維持する。branch指定とのSwiftPM制約・更新/解消条件は[DEPENDENCIES.md](DEPENDENCIES.md#2026-11-17-manifest削減と互換lock)と[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)に記録する。固定blindlog参照や既存PostgresNIO修正forkを置き換える変更ではない。
+PostgreSQL adapterとISO9075のprotocol不整合により、SQL `76b61c7adfa3159dba5353a8f8b05110112d0050` / ISO9075 `a8e0f3223cd0046adbd8545e7a290f61c12f6048` の互換組合せを前回検証した。現在のユーザー更新lockはこの2pinが更新されており、今回のWebAuthn固定では維持している。branch指定とのSwiftPM制約・更新/解消条件は[DEPENDENCIES.md](DEPENDENCIES.md#2026-11-17-manifest削減と互換lock)と[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)に記録する。固定blindlog参照や既存PostgresNIO修正forkを置き換える変更ではない。
 
 ## Historical catalogue adoption decisions
 
@@ -40,12 +40,12 @@ The fixed blindlog commit remains the historical architecture reference. Later e
 
 Business records and challenges remain authoritative in PostgreSQL; Google Cloud and Workspace retain their specified roles. The reference project's email OTP login, Valkey challenge store, Cloudflare deployment and secret configuration are not inherited.
 
-## Current forks and source evaluation
+## Forks and historical source evaluation
 
-- WebAuthn declares `from: "1.0.0-beta.3"`; Package.resolved locks the release to merged [upstream PR #128](https://github.com/brokenhandsio/swift-webauthn/pull/128), merge commit `38b75016ed3550c7b08b70af05538a807f507285`, replacing the temporary compatibility fork. No public initializer is added to manufacture a verified result. Apache-2.0 and upstream NOTICE remain applicable.
+- WebAuthn temporarily declares `exact: "1.0.0-beta.3"` pending removal of the conflicting beta-2 tag ([upstream Issue135](https://github.com/brokenhandsio/swift-webauthn/issues/135)); Package.resolved locks the release to merged [upstream PR #128](https://github.com/brokenhandsio/swift-webauthn/pull/128), merge commit `38b75016ed3550c7b08b70af05538a807f507285`, replacing the temporary compatibility fork. No public initializer is added to manufacture a verified result. Apache-2.0 and upstream NOTICE remain applicable.
 - [swift-cbor 0.3.0](https://github.com/brokenhandsio/swift-cbor/tree/0.3.0), product CBOR, matches the merged WebAuthn minimum. Sauna retains bounded framing and explicit duplicate-key and depth checks with the MIT parser. Old SwiftCBOR is absent from the lock.
 - swift-postgresql uses the requested `fix-postgresql-closure-lifetime` at `e5dca9dca136f5dd646bc98e2f3cdf1090430e26` with PostgresNIO trait. Source review identified the synchronous borrowed-closure lifetime change. Sauna uses its query rendering bridge on the existing async connection rather than copying unsafe lifetime code. LICENSE.md is Apache-2.0.
-- swift-sql is declared on requested main and locked to `76b61c7adfa3159dba5353a8f8b05110112d0050`; its table macros/builders feed parameterized queries in PR #44. LICENSE.md is MIT. Direct ISO9075 is locked to `a8e0f3223cd0046adbd8545e7a290f61c12f6048`; its Apache-2.0 license includes a Runtime Library Exception.
+- Historical verification used swift-sql on requested main at `76b61c7adfa3159dba5353a8f8b05110112d0050`; its table macros/builders feed parameterized queries in PR #44. LICENSE.md is MIT. Historical ISO9075 verification used `a8e0f3223cd0046adbd8545e7a290f61c12f6048`; its Apache-2.0 license includes a Runtime Library Exception.
 - PostgresNIO is locked to reviewed fork `1b9c2a873ee6c5dfa33bdb0370f3537c361e801f` ([fork PR4](https://github.com/sauna-studio/postgres-nio/pull/4)), extending the initial connection async-query fix to Future and pooled task writes with distinct acceptance/result lifetimes. Fork history uses `sauna-1.33.2`; upstream main remains intact. Current runtime verification and limits are in docs/DEPENDENCIES.md and docs/LOCAL_VALIDATION.md. LICENSE is MIT and NOTICE.txt is present.
 
 ## Historical reference pins

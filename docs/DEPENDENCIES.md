@@ -6,7 +6,9 @@
 
 2026-11-17の追加指示により、package宣言とtarget edgeの推移的な重複も削除する。残す参照は`.target(name:)` / `.product(name:package:)`を明示する。PostgreSQLとWebAuthnからNIO、ISO9075、Crypto、CBOR、Loggingへ到達し、OpenAPIHummingbirdとOTelからHTTP/server/tracing moduleへ到達する。SQL Macros / SQL Foundation Integration、ContractのOpenAPIRuntime、HummingbirdTesting、OpenAPI build pluginは必要なproductとして維持する。PostgresNIOは修正fork選択のためpackage宣言を維持する。厳格compiler設定、公開products、target境界、認証・施設認可sourceは維持する。
 
-OpenAPI Runtimeは`1.13.3`のlockを保持する。`1.13.4`で406 error responseのbody契約が変更され、既存live HTTPの空body回帰が失敗したため、現行の公開応答契約を維持できる版を選択する。manifestの`from: "1.13.3"`は維持する。将来更新では応答policyの確認と`invalidRequestsNeverEchoRequestDataOrInternalDetails`を含む実HTTP/全テストを必須とし、[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)でSQL依存と併せて追跡する。
+前回の互換検証ではOpenAPI Runtime `1.13.3`を使用した。その後のユーザー更新により現在のlockは`1.13.4`であり、今回のWebAuthn exact固定では他のpinを変更していない。`1.13.4`で406 error responseのbody契約が変更され、既存live HTTPの空body回帰が失敗したため、当時は公開応答契約を維持するため1.13.3へ戻した。manifestの`from: "1.13.3"`は維持する。現在の1.13.4における406応答の契約調整は未完了である。将来更新では応答policyの確認と`invalidRequestsNeverEchoRequestDataOrInternalDetails`を含む実HTTP/全テストを必須とし、[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)でSQL依存と併せて追跡する。
+
+現在のSQL/ISO9075のpinもその後のユーザー更新を保持しており、今回のWebAuthn固定に伴うbuild/test試行は既知のReader protocol不適合で停止した。以下の互換lock記録は以前の検証結果として参照する。
 
 以下の17宣言時点の削減記録とlicense inventoryは履歴であり、現在の9宣言と依存graphはPackage.swift / Package.resolvedを参照する。consumer sourceのmodule importは維持し、実build/testで推移的なmodule利用を検証する。
 
@@ -14,9 +16,9 @@ OpenAPI Runtimeは`1.13.3`のlockを保持する。`1.13.4`で406 error response
 
 未使用のArgumentParser、Currency、HummingbirdAuth、PostgresKit、JWTKit、Cloudflare、HummingbirdPostgres、Valkey、UUIDV7の9宣言を削除した。NIO、HTTPTypes、ServiceLifecycle、Crypto、Tracing、ISO9075などは直接importするため維持する。未使用機能を有効化する変更ではない。
 
-[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)でSQL依存の互換性を追跡する。swift-postgresql `e5dca9dca136f5dd646bc98e2f3cdf1090430e26` の旧Reader/Database witnessはISO9075 `86e897d6939562fc13a02ed443e3bf110e311821`のgeneric Thrown/Failure要件を満たさない。このためISO9075は `a8e0f3223cd0046adbd8545e7a290f61c12f6048`、SQLは `76b61c7adfa3159dba5353a8f8b05110112d0050` の互換組合せをlockで保持する。manifestのrevision指定とtargeted revision resolveは下位packageのmain指定と競合するため採用しない。依存更新時は既存の互換stateを保持し、graph整理後もこの2 stateが一致することを確認する。無制約の全branch更新を合格済みと扱わない。
+[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)でSQL依存の互換性を追跡する。swift-postgresql `e5dca9dca136f5dd646bc98e2f3cdf1090430e26` の旧Reader/Database witnessはISO9075 `86e897d6939562fc13a02ed443e3bf110e311821`のgeneric Thrown/Failure要件を満たさない。当時はISO9075 `a8e0f3223cd0046adbd8545e7a290f61c12f6048`、SQL `76b61c7adfa3159dba5353a8f8b05110112d0050` の互換組合せへ戻して検証した。現在のユーザー更新lockではこの2pinが更新されており、今回のWebAuthn固定では変更していない。manifestのrevision指定とtargeted revision resolveは下位packageのmain指定と競合するため採用しない。依存更新時は既存の互換stateを保持し、graph整理後もこの2 stateが一致することを確認する。無制約の全branch更新を合格済みと扱わない。
 
-WebAuthnは[Issue49](https://github.com/sauna-studio/sauna-api/issues/49)記載のtag順序制約により `1.0.0-beta.3` / `38b75016ed3550c7b08b70af05538a807f507285` を維持する。旧beta-2とSwiftCBORへ戻っていないことを確認する。検証は `swift build --force-resolved-versions` / `swift test --force-resolved-versions` と使い捨てPostgreSQL18で実行する。
+WebAuthnはtag順序制約のためmanifestを`exact: "1.0.0-beta.3"`へ固定し、`38b75016ed3550c7b08b70af05538a807f507285`を保持する。[上流Issue135](https://github.com/brokenhandsio/swift-webauthn/issues/135)で`1.0.0-beta-2`タグ削除を依頼した。削除後、通常resolveが旧版を選ばないこととbuild/testを確認して`from:`へ戻す。旧beta-2とSwiftCBORへ戻っていないことを確認する。検証は `swift build --force-resolved-versions` / `swift test --force-resolved-versions` と使い捨てPostgreSQL18で実行する。
 
 恒久対応はclosure lifetime修正を維持したPostgreSQL adapterの新protocol対応を採用し、SQL/ISO9075を一緒に更新して通常resolve、frozen build/test、TypedSQLAdapterTestsと実DB統合を通すこと。依存更新と上流対応を再確認の契機とし、保持制約が不要になった時点でIssue86を解消する。
 
