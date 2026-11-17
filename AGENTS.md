@@ -40,13 +40,15 @@ Writing-responsibility source: `sauna-studio/.github@8c079a24796dd0f5ea28f3c5e6f
 
 ## ワークアラウンドの追跡
 
-不具合・制約を暫定的に回避する実装や運用を導入した場合は、関連Issueの重複を確認し、既存Issueへ追記するか、無ければ追跡Issueを作成する。恒久的な設計や妥当な設定を、根拠なく暫定対処と扱わない。
+不具合・制約を暫定的に回避する実装や継続的な運用を導入するときは、導入PRのmergeまでに必ず関連Issueの重複を確認し、既存Issueへ追記するか、無ければ追跡Issueを作成して`workaround`ラベルを付ける。導入後の別作業へ先送りしない。恒久的な設計や妥当な設定を、根拠なく暫定対処と扱わない。
 
 追跡Issueには導入理由、影響範囲、該当コード・PR、恒久対応案、解消・削除条件、上流Issue/PR（該当する場合）、再確認の契機、回帰検証を記録する。必要なコード箇所にはWhy notコメントで制約とIssue参照を残し、導入PRからも追跡Issueを参照する。
 
+Issues無効のforkでは、設定を変更せず利用側リポジトリのIssueへ完全URLで追跡する。秘密の脆弱性は公開Issueへ記載せずSECURITY.mdに従う。
+
 導入PRでは追跡Issueを自動closeする記法を使わず参照する。恒久対応または回避策が不要になったことを、解消条件と回帰検証で確認してから追跡Issueを閉じる。
 
-ワークアラウンド追跡規則の適用元: `sauna-studio/.github@e1913bfe802c4aa6ca8de3e7d676ddbb5073c924`。
+ワークアラウンド追跡規則の適用元: `sauna-studio/.github@3a0c901bf9f921d5a1af760479e0be2debd3a4d9`。
 
 ## セキュリティ
 
