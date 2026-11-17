@@ -1,3 +1,4 @@
+import PostgresNIO
 import Foundation
 import Testing
 @testable import SaunaAPIDatabase

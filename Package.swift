@@ -41,8 +41,8 @@ let package = Package(
     ),
     .package(url: "https://github.com/brokenhandsio/swift-webauthn.git", exact: "1.0.0-beta.3"),
     .package(
-      url: "https://github.com/zunda-pixel/swift-postgresql.git",
-      branch: "fix-postgresql-closure-lifetime", traits: ["PostgresNIO"]
+      url: "https://github.com/swift-compositions/swift-postgresql.git",
+      revision: "837a5c0d43b495372c17de08d5f187f6819601b0"
     ),
     .package(
       url: "https://github.com/sauna-studio/postgres-nio.git",
@@ -53,7 +53,8 @@ let package = Package(
     .target(
       name: "SaunaAPIIdentity",
       dependencies: [
-        .product(name: "PostgreSQL", package: "swift-postgresql"),
+        .product(name: "PostgreSQL SQL", package: "swift-postgresql"),
+        .product(name: "PostgresNIO", package: "postgres-nio"),
         .product(name: "SQL Macros", package: "swift-sql"),
         .product(name: "SQL Foundation Integration", package: "swift-sql"),
         .product(name: "WebAuthn", package: "swift-webauthn"),

@@ -2,17 +2,19 @@
 
 2026-11-17の最新ユーザー指示により、Saunaのtargetが直接使うproductとbuild pluginに必要なpackage宣言だけを残す。将来用catalogueの宣言維持方針は更新された。保持するtarget/product参照は明示し、推移依存で到達するmoduleのpackage宣言やtarget edgeは重複して追加しない。実際のgraphはPackage.swift / Package.resolvedを正本とする。
 
-## Minimal dependency declarations
+## Current SQL and error-response boundaries
 
-2026-11-17の追加指示により、package宣言とtarget edgeの推移的な重複も削除する。残す参照は`.target(name:)` / `.product(name:package:)`を明示する。PostgreSQLとWebAuthnからNIO、ISO9075、Crypto、CBOR、Loggingへ到達し、OpenAPIHummingbirdとOTelからHTTP/server/tracing moduleへ到達する。SQL Macros / SQL Foundation Integration、ContractのOpenAPIRuntime、HummingbirdTesting、OpenAPI build pluginは必要なproductとして維持する。PostgresNIOは修正fork選択のためpackage宣言を維持する。厳格compiler設定、公開products、target境界、認証・施設認可sourceは維持する。
+Package/target間の推移依存の重複を避け、残す参照は`.target(name:)` / `.product(name:package:)`を明示する。SQL Macros/Foundation Integration、Contract runtime、HummingbirdTesting、OpenAPI pluginとPostgresNIO修正forkは必要なproduct/宣言として維持する。
 
-前回の互換検証ではOpenAPI Runtime `1.13.3`を使用した。その後のユーザー更新により現在のlockは`1.13.4`であり、今回のWebAuthn exact固定では他のpinを変更していない。`1.13.4`で406 error responseのbody契約が変更され、既存live HTTPの空body回帰が失敗したため、当時は公開応答契約を維持するため1.13.3へ戻した。manifestの`from: "1.13.3"`は維持する。現在の1.13.4における406応答の契約調整は未完了である。将来更新では応答policyの確認と`invalidRequestsNeverEchoRequestDataOrInternalDetails`を含む実HTTP/全テストを必須とし、[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)でSQL依存と併せて追跡する。
+SQL描画は公式[swift-compositions/swift-postgresql@837a5c0](https://github.com/swift-compositions/swift-postgresql/tree/837a5c0d43b495372c17de08d5f187f6819601b0)の`PostgreSQL SQL` productを使用する。旧zunda-pixel branchを置き換え、PostgresNIO traitと同期engineをリンクしない。上流は新しいISO9075 Reader/Database要件とclosure lifetime対処を含むが、Saunaが使うのは描画だけでありengine実行を検証済みとは扱わない。採用sourceはApache-2.0、[LICENSE.md](https://github.com/swift-compositions/swift-postgresql/blob/837a5c0d43b495372c17de08d5f187f6819601b0/LICENSE.md)、別NOTICEなし。
 
-現在のSQL/ISO9075のpinもその後のユーザー更新を保持しており、今回のWebAuthn固定に伴うbuild/test試行は既知のReader protocol不適合で停止した。以下の互換lock記録は以前の検証結果として参照する。
+上流のPostgresQuery変換initializerはpackage-privateになったため、AuthTypedQueries内で認証クエリが使うblob/text/uuidだけをPostgresBindingsへ渡す。SQL文字列と値は分離し、その他の型と描画失敗は固定AuthenticationError.unavailableで拒否する。既存の非同期transaction lease、失効predicate、FOR UPDATE、DB時刻は維持する。新しい値型を使うクエリには、その型のbind実装と回帰が必要である。
 
-以下の17宣言時点の削減記録とlicense inventoryは履歴であり、現在の9宣言と依存graphはPackage.swift / Package.resolvedを参照する。consumer sourceのmodule importは維持し、実build/testで推移的なmodule利用を検証する。
+OpenAPI Runtime1.13.4の406 ProblemDetailsが入力を反映するため、PublicErrorMiddlewareでthrowされたエラーは400...599のstatus codeだけを標準Statusへ変換し、body/headerを返さない。未知エラーは空500、キャンセルは伝播する。正常returnされたtyped503・認証problem・cookieは保持する。これは依存の旧版固定ではなく、Saunaの公開応答policyである。
 
-## 2026-11-17: manifest削減と互換lock
+WebAuthnは上流[Issue135](https://github.com/brokenhandsio/swift-webauthn/issues/135)のタグ削除待ちで`exact: "1.0.0-beta.3"`を維持する。PostgresNIO修正forkも維持する。SQL旧版lock/Runtime旧版への一時復元は以下の履歴であり、現在のgraphはPackage.swift/Package.resolvedを参照する。[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)で移行と検証結果を追跡する。
+
+## Historical 2026-11-17 manifest cleanup and compatible locks
 
 未使用のArgumentParser、Currency、HummingbirdAuth、PostgresKit、JWTKit、Cloudflare、HummingbirdPostgres、Valkey、UUIDV7の9宣言を削除した。NIO、HTTPTypes、ServiceLifecycle、Crypto、Tracing、ISO9075などは直接importするため維持する。未使用機能を有効化する変更ではない。
 

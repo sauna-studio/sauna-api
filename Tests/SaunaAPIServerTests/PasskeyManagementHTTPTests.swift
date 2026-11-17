@@ -1,3 +1,4 @@
+import NIOCore
 import CBOR
 import Crypto
 import Foundation

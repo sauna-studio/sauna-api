@@ -1,3 +1,4 @@
+import NIOCore
 import Foundation
 import HTTPTypes
 import HummingbirdTesting

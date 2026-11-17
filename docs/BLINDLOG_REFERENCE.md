@@ -18,6 +18,10 @@ ExistentialAny、InternalImportsByDefault、MemberImportVisibility、InferIsolat
 
 MemberImportVisibilityで見つかった欠落は定義moduleの直接importで直す。起動処理は固定Hummingbird版のrunService既定値（SIGTERM/SIGINT）を使い、transitive importのUnixSignal静的memberへ依存しない。strictMemorySafetyはコンパイラの検査であり、第三者libraryも含む完全なmemory safetyの証明とは記録しない。
 
+## Current SQL adoption
+
+公式swift-compositions/swift-postgresqlの固定revision `837a5c0d43b495372c17de08d5f187f6819601b0`へ移行し、`PostgreSQL SQL`だけを使う。engine-privateになったPostgresQuery変換は、Saunaの既存async接続にblob/text/uuidをbindする小さい境界へ置き換えた。同期engine/新poolを導入しない。出典・license・保証範囲は[DEPENDENCIES.md](DEPENDENCIES.md#current-sql-and-error-response-boundaries)を参照する。以下の旧fork/互換lock記録は履歴である。
+
 ## 2026-11-17 manifest cleanup
 
 最新ユーザー指示により、将来用の未使用9 package宣言に加え、package/target間の推移依存の重複を削除した。残すtarget/product参照は明示し、必要なSQL macro・OpenAPI生成・test productとPostgresNIO修正forkの指定を保持する。以下のcatalogue対応表は削除前の履歴として保持する。現在の宣言はPackage.swiftを参照する。
