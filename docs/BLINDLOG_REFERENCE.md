@@ -36,7 +36,7 @@ Business records and challenges remain authoritative in PostgreSQL; Google Cloud
 
 ## Current forks and source evaluation
 
-- WebAuthn directly pins merged [upstream PR #128](https://github.com/brokenhandsio/swift-webauthn/pull/128), merge commit `38b75016ed3550c7b08b70af05538a807f507285`, replacing the temporary compatibility fork. No public initializer is added to manufacture a verified result. Apache-2.0 and upstream NOTICE remain applicable.
+- WebAuthn declares `from: "1.0.0-beta.3"`; Package.resolved locks the release to merged [upstream PR #128](https://github.com/brokenhandsio/swift-webauthn/pull/128), merge commit `38b75016ed3550c7b08b70af05538a807f507285`, replacing the temporary compatibility fork. No public initializer is added to manufacture a verified result. Apache-2.0 and upstream NOTICE remain applicable.
 - [swift-cbor 0.3.0](https://github.com/brokenhandsio/swift-cbor/tree/0.3.0), product CBOR, matches the merged WebAuthn minimum. Sauna retains bounded framing and explicit duplicate-key and depth checks with the MIT parser. Old SwiftCBOR is absent from the lock.
 - swift-postgresql uses the requested `fix-postgresql-closure-lifetime` at `e5dca9dca136f5dd646bc98e2f3cdf1090430e26` with PostgresNIO trait. Source review identified the synchronous borrowed-closure lifetime change. Sauna uses its query rendering bridge on the existing async connection rather than copying unsafe lifetime code. LICENSE.md is Apache-2.0.
 - swift-sql is declared on requested main and locked to `76b61c7adfa3159dba5353a8f8b05110112d0050`; its table macros/builders feed parameterized queries in PR #44. LICENSE.md is MIT. Direct ISO9075 is locked to `a8e0f3223cd0046adbd8545e7a290f61c12f6048`; its Apache-2.0 license includes a Runtime Library Exception.
