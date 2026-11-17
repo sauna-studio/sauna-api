@@ -62,7 +62,8 @@ let package = Package(
     ),
     .testTarget(
       name: "SaunaAPIIdentityTests",
-      dependencies: [.target(name: "SaunaAPIDatabase")]
+      dependencies: [.target(name: "SaunaAPIDatabase")],
+      swiftSettings: swiftSettings
     ),
     .target(
       name: "SaunaAPIDatabase",
@@ -76,7 +77,8 @@ let package = Package(
     ),
     .testTarget(
       name: "SaunaAPIDatabaseTests",
-      dependencies: [.target(name: "SaunaAPIDatabase")]
+      dependencies: [.target(name: "SaunaAPIDatabase")],
+      swiftSettings: swiftSettings
     ),
     .target(
       name: "SaunaAPIContract",
@@ -88,11 +90,16 @@ let package = Package(
         .plugin(name: "OpenAPIGenerator", package: "swift-openapi-generator")
       ]
     ),
-    .testTarget(name: "SaunaAPIContractTests", dependencies: [.target(name: "SaunaAPIContract")]),
+    .testTarget(
+      name: "SaunaAPIContractTests",
+      dependencies: [.target(name: "SaunaAPIContract")],
+      swiftSettings: swiftSettings
+	),
     .target(
       name: "SaunaAPIServer",
       dependencies: [
-        .target(name: "SaunaAPIContract"), .target(name: "SaunaAPIDatabase"),
+        .target(name: "SaunaAPIContract"),
+        .target(name: "SaunaAPIDatabase"),
         .product(name: "OpenAPIHummingbird", package: "swift-openapi-hummingbird"),
         .product(name: "OTel", package: "swift-otel"),
       ],
@@ -106,9 +113,11 @@ let package = Package(
     .testTarget(
       name: "SaunaAPIServerTests",
       dependencies: [
-        .target(name: "SaunaAPI"), .product(name: "HummingbirdTesting", package: "hummingbird"),
+        .target(name: "SaunaAPI"),
+        .product(name: "HummingbirdTesting", package: "hummingbird"),
       ],
-      resources: [.copy("Fixtures")]
+      resources: [.copy("Fixtures")],
+      swiftSettings: swiftSettings
     ),
   ]
 )

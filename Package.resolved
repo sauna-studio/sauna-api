@@ -1,5 +1,5 @@
 {
-  "originHash" : "0005c979c3289462fb8995451998791ffd5fcf608684e65da33dbd973a677630",
+  "originHash" : "f1c15d0b23d262d72c04b9aa20a62ea5d27113a62f1b03c48e51fd85ab4279f3",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -13,7 +13,7 @@
     {
       "identity" : "hummingbird",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hummingbird-project/hummingbird",
+      "location" : "https://github.com/hummingbird-project/hummingbird.git",
       "state" : {
         "revision" : "341e11f65d8e24cf87e9aae427c040f0084ada4e",
         "version" : "2.28.1"
@@ -399,7 +399,7 @@
     {
       "identity" : "swift-http-types",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-http-types",
+      "location" : "https://github.com/apple/swift-http-types.git",
       "state" : {
         "revision" : "bff4b6903cdc99dda49649dd52f46c11cfd3ed50",
         "version" : "1.8.0"
@@ -438,7 +438,7 @@
       "location" : "https://github.com/swift-iso/swift-iso-9075.git",
       "state" : {
         "branch" : "main",
-        "revision" : "a8e0f3223cd0046adbd8545e7a290f61c12f6048"
+        "revision" : "86e897d6939562fc13a02ed443e3bf110e311821"
       }
     },
     {
@@ -606,10 +606,10 @@
     {
       "identity" : "swift-openapi-runtime",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-openapi-runtime",
+      "location" : "https://github.com/apple/swift-openapi-runtime.git",
       "state" : {
-        "revision" : "6927ad435adf4d00fe55fc61b9a07a04673c79c8",
-        "version" : "1.13.3"
+        "revision" : "b9ebb3f06f1dac717156a04f0919ad444cbcf8f5",
+        "version" : "1.13.4"
       }
     },
     {
@@ -888,7 +888,7 @@
       "location" : "https://github.com/swift-compositions/swift-sql.git",
       "state" : {
         "branch" : "main",
-        "revision" : "76b61c7adfa3159dba5353a8f8b05110112d0050"
+        "revision" : "6b32968758f840c76742d2a8b08d473da16c263c"
       }
     },
     {
