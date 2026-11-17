@@ -1,5 +1,5 @@
 {
-  "originHash" : "300296fb4f36e8a20f74b80b63345260660d223ba98fff1bf9c8b080d619c465",
+  "originHash" : "0005c979c3289462fb8995451998791ffd5fcf608684e65da33dbd973a677630",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -438,7 +438,7 @@
       "location" : "https://github.com/swift-iso/swift-iso-9075.git",
       "state" : {
         "branch" : "main",
-        "revision" : "86e897d6939562fc13a02ed443e3bf110e311821"
+        "revision" : "a8e0f3223cd0046adbd8545e7a290f61c12f6048"
       }
     },
     {
@@ -606,10 +606,10 @@
     {
       "identity" : "swift-openapi-runtime",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-openapi-runtime.git",
+      "location" : "https://github.com/apple/swift-openapi-runtime",
       "state" : {
-        "revision" : "b9ebb3f06f1dac717156a04f0919ad444cbcf8f5",
-        "version" : "1.13.4"
+        "revision" : "6927ad435adf4d00fe55fc61b9a07a04673c79c8",
+        "version" : "1.13.3"
       }
     },
     {
@@ -888,7 +888,7 @@
       "location" : "https://github.com/swift-compositions/swift-sql.git",
       "state" : {
         "branch" : "main",
-        "revision" : "6b32968758f840c76742d2a8b08d473da16c263c"
+        "revision" : "76b61c7adfa3159dba5353a8f8b05110112d0050"
       }
     },
     {
@@ -986,8 +986,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/brokenhandsio/swift-webauthn.git",
       "state" : {
-        "revision" : "030acd1eedaa835958ae3fcc0e491bec03b2abf1",
-        "version" : "1.0.0-beta-2"
+        "revision" : "38b75016ed3550c7b08b70af05538a807f507285",
+        "version" : "1.0.0-beta.3"
       }
     },
     {
@@ -997,15 +997,6 @@
       "state" : {
         "branch" : "main",
         "revision" : "71f302e2c43f8f51002d6abc503c7838bd9fd52d"
-      }
-    },
-    {
-      "identity" : "swiftcbor",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/unrelentingtech/SwiftCBOR.git",
-      "state" : {
-        "revision" : "fd929a6d8f7651ce0f63fc99397fd5762358cc29",
-        "version" : "0.6.0"
       }
     },
     {

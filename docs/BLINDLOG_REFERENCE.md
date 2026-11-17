@@ -20,7 +20,7 @@ MemberImportVisibilityで見つかった欠落は定義moduleの直接importで�
 
 ## 2026-11-17 manifest cleanup
 
-最新ユーザー指示により、将来用の未使用9 package宣言を削除し、直接使用するproductとbuild pluginの宣言を残した。以下のcatalogue対応表は削除前の履歴として保持する。現在の宣言はPackage.swiftを参照する。
+最新ユーザー指示により、将来用の未使用9 package宣言に加え、package/target間の推移依存の重複を削除した。残すtarget/product参照は明示し、必要なSQL macro・OpenAPI生成・test productとPostgresNIO修正forkの指定を保持する。以下のcatalogue対応表は削除前の履歴として保持する。現在の宣言はPackage.swiftを参照する。
 
 PostgreSQL adapterとISO9075のprotocol不整合により、SQL `76b61c7adfa3159dba5353a8f8b05110112d0050` / ISO9075 `a8e0f3223cd0046adbd8545e7a290f61c12f6048` の互換lockを維持する。branch指定とのSwiftPM制約・更新/解消条件は[DEPENDENCIES.md](DEPENDENCIES.md#2026-11-17-manifest削減と互換lock)と[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)に記録する。固定blindlog参照や既存PostgresNIO修正forkを置き換える変更ではない。
 

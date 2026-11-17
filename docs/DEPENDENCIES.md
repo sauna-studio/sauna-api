@@ -1,6 +1,14 @@
 # API dependency catalogue
 
-2026-11-17の最新ユーザー指示により、Saunaのtargetが直接使うproductとbuild pluginに必要なpackage宣言だけを残す。将来用catalogueの宣言維持方針は更新された。直接importするmoduleの依存は明示し、推移依存だけのための宣言を追加しない。実際のgraphはPackage.swift / Package.resolvedを正本とする。
+2026-11-17の最新ユーザー指示により、Saunaのtargetが直接使うproductとbuild pluginに必要なpackage宣言だけを残す。将来用catalogueの宣言維持方針は更新された。保持するtarget/product参照は明示し、推移依存で到達するmoduleのpackage宣言やtarget edgeは重複して追加しない。実際のgraphはPackage.swift / Package.resolvedを正本とする。
+
+## Minimal dependency declarations
+
+2026-11-17の追加指示により、package宣言とtarget edgeの推移的な重複も削除する。残す参照は`.target(name:)` / `.product(name:package:)`を明示する。PostgreSQLとWebAuthnからNIO、ISO9075、Crypto、CBOR、Loggingへ到達し、OpenAPIHummingbirdとOTelからHTTP/server/tracing moduleへ到達する。SQL Macros / SQL Foundation Integration、ContractのOpenAPIRuntime、HummingbirdTesting、OpenAPI build pluginは必要なproductとして維持する。PostgresNIOは修正fork選択のためpackage宣言を維持する。厳格compiler設定、公開products、target境界、認証・施設認可sourceは維持する。
+
+OpenAPI Runtimeは`1.13.3`のlockを保持する。`1.13.4`で406 error responseのbody契約が変更され、既存live HTTPの空body回帰が失敗したため、現行の公開応答契約を維持できる版を選択する。manifestの`from: "1.13.3"`は維持する。将来更新では応答policyの確認と`invalidRequestsNeverEchoRequestDataOrInternalDetails`を含む実HTTP/全テストを必須とし、[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)でSQL依存と併せて追跡する。
+
+以下の17宣言時点の削減記録とlicense inventoryは履歴であり、現在の9宣言と依存graphはPackage.swift / Package.resolvedを参照する。consumer sourceのmodule importは維持し、実build/testで推移的なmodule利用を検証する。
 
 ## 2026-11-17: manifest削減と互換lock
 
