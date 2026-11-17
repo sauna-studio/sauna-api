@@ -1,85 +1,22 @@
 {
-  "originHash" : "0314d7fb96e38b749e4d555382a2de05d22cde3a75adac7e7c96bea688dfd80e",
+  "originHash" : "a42e40124382a5740020256962115f18358523473b990dc8e59610b78feb49a3",
   "pins" : [
     {
       "identity" : "async-http-client",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swift-server/async-http-client.git",
       "state" : {
-        "revision" : "4c005f955e83f888d5616e579717a36d2dfc6301",
-        "version" : "1.36.2"
-      }
-    },
-    {
-      "identity" : "async-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/async-kit.git",
-      "state" : {
-        "revision" : "6bbb83cbf9d886623a967a965c8fb1b73e6566f9",
-        "version" : "1.22.0"
-      }
-    },
-    {
-      "identity" : "cloudflare-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/zunda-pixel/cloudflare-swift.git",
-      "state" : {
-        "revision" : "ed1ec02c70cdf301159d7a770b91d4c70763f81b",
-        "version" : "0.8.3"
-      }
-    },
-    {
-      "identity" : "http-client",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/zunda-pixel/http-client",
-      "state" : {
-        "revision" : "0d115da7b3746bad0c6c8856087651e19d4bbaba",
-        "version" : "0.4.0"
+        "revision" : "d2dfb39bcb0fafd1834ec6e6334c1755360f856e",
+        "version" : "1.37.0"
       }
     },
     {
       "identity" : "hummingbird",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hummingbird-project/hummingbird",
+      "location" : "https://github.com/hummingbird-project/hummingbird.git",
       "state" : {
         "revision" : "341e11f65d8e24cf87e9aae427c040f0084ada4e",
         "version" : "2.28.1"
-      }
-    },
-    {
-      "identity" : "hummingbird-auth",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hummingbird-project/hummingbird-auth.git",
-      "state" : {
-        "revision" : "b94ab03d76ce9d7c7162fbf8898d76877f623392",
-        "version" : "2.5.0"
-      }
-    },
-    {
-      "identity" : "hummingbird-postgres",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hummingbird-project/hummingbird-postgres.git",
-      "state" : {
-        "revision" : "c1674a4eaef71440df8a05538d937eb0e6609227",
-        "version" : "1.1.0"
-      }
-    },
-    {
-      "identity" : "jwt-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/jwt-kit.git",
-      "state" : {
-        "revision" : "8bda2e7fe7d0e48f98b9d33d5e0b360fe9a5368d",
-        "version" : "5.8.0"
-      }
-    },
-    {
-      "identity" : "multipart-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/multipart-kit",
-      "state" : {
-        "revision" : "a97308911fec948fd47a3d464465114b648e96b2",
-        "version" : "5.0.0-beta.2"
       }
     },
     {
@@ -92,24 +29,6 @@
       }
     },
     {
-      "identity" : "postgres-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/postgres-kit.git",
-      "state" : {
-        "revision" : "139b0c4712d97eaec09d97afd592d394cdb9dbde",
-        "version" : "2.17.0"
-      }
-    },
-    {
-      "identity" : "postgres-migrations",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hummingbird-project/postgres-migrations",
-      "state" : {
-        "revision" : "90d8fd9e365c26c0a0f4cbe498fdf10532704419",
-        "version" : "1.2.0"
-      }
-    },
-    {
       "identity" : "postgres-nio",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sauna-studio/postgres-nio.git",
@@ -118,21 +37,12 @@
       }
     },
     {
-      "identity" : "sql-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/sql-kit.git",
-      "state" : {
-        "revision" : "3779cedb44b1f374f2cca261c6d28f206024a582",
-        "version" : "3.36.0"
-      }
-    },
-    {
       "identity" : "swift-addition",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swift-atoms/swift-addition.git",
       "state" : {
         "branch" : "main",
-        "revision" : "d7b7c60c5ea60089de83dd85c638a7c5964f033e"
+        "revision" : "cf09b4a9952edec63de6166da61e6b3cab74d8d2"
       }
     },
     {
@@ -141,7 +51,7 @@
       "location" : "https://github.com/swift-atoms/swift-advancement.git",
       "state" : {
         "branch" : "main",
-        "revision" : "13eaf44b59136dce7b83109ef679dbcdec7e7435"
+        "revision" : "0a0750aac484c5f18dff4505df6acfa3ee96d325"
       }
     },
     {
@@ -150,7 +60,7 @@
       "location" : "https://github.com/swift-atoms/swift-algebra.git",
       "state" : {
         "branch" : "main",
-        "revision" : "db467365793c585a4df5f80f8f8a23c64243c763"
+        "revision" : "1a2478e79406e9eb6c5eecaa9a89cdee25723b4e"
       }
     },
     {
@@ -168,7 +78,7 @@
       "location" : "https://github.com/swift-atoms/swift-always.git",
       "state" : {
         "branch" : "main",
-        "revision" : "3885bc8d8eae1aa3a390a9837e1e873cf386b0ed"
+        "revision" : "468beb95cdd9da6ac0ad99590dfef91e3ed8a43b"
       }
     },
     {
@@ -177,7 +87,7 @@
       "location" : "https://github.com/swift-atoms/swift-append.git",
       "state" : {
         "branch" : "main",
-        "revision" : "726220c13bfcd49c04760eab2ea7075c223d4f03"
+        "revision" : "6cd0f52888ca43bb8b7e196e3731111c324f7005"
       }
     },
     {
@@ -195,7 +105,7 @@
       "location" : "https://github.com/swift-atoms/swift-ascii.git",
       "state" : {
         "branch" : "main",
-        "revision" : "81be3fc02986b441d53f4c61e3f48dbd9bd28fcf"
+        "revision" : "d85c5ee2b5a0fb8587c58b8b75b52b0a2559881a"
       }
     },
     {
@@ -203,8 +113,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-asn1.git",
       "state" : {
-        "revision" : "3b6410f7dee09eb33cdd26260c5fd47fda19b0e2",
-        "version" : "1.7.3"
+        "revision" : "917b472dbe53ba699cbb0495f9a95a084bc6364d",
+        "version" : "1.7.4"
       }
     },
     {
@@ -231,7 +141,7 @@
       "location" : "https://github.com/swift-atoms/swift-bifunctor.git",
       "state" : {
         "branch" : "main",
-        "revision" : "4feb1702c757e89f82b20271deec5599cd13796b"
+        "revision" : "a799faf606ff6ccc6aeefad372d082394d561b56"
       }
     },
     {
@@ -240,7 +150,7 @@
       "location" : "https://github.com/swift-atoms/swift-bit.git",
       "state" : {
         "branch" : "main",
-        "revision" : "2b8a5a2b608516a10df920dd6b6a02eb8473a1e7"
+        "revision" : "b6f77a754856e790122a9eeadc70f7738658ce2f"
       }
     },
     {
@@ -249,7 +159,7 @@
       "location" : "https://github.com/swift-atoms/swift-byte.git",
       "state" : {
         "branch" : "main",
-        "revision" : "4229a9d737205f287e23dbb129d6c8fc83558685"
+        "revision" : "2511c2ece6d1d056192769c1850f2da22eaf154d"
       }
     },
     {
@@ -258,7 +168,7 @@
       "location" : "https://github.com/swift-atoms/swift-cardinal.git",
       "state" : {
         "branch" : "main",
-        "revision" : "c0a37e710dfaeb65621d19c82d1dd5f006632fd8"
+        "revision" : "03599fe21b4da9edeaf5da6bcc20bea6104b31f8"
       }
     },
     {
@@ -267,7 +177,7 @@
       "location" : "https://github.com/swift-atoms/swift-carrier.git",
       "state" : {
         "branch" : "main",
-        "revision" : "3438c0f232913f744c5ae1f69732e8d1283881e5"
+        "revision" : "419c5bb1f5ca80d18e637c2a470bcbaa52eb5e4b"
       }
     },
     {
@@ -294,7 +204,7 @@
       "location" : "https://github.com/swift-atoms/swift-checkpoint.git",
       "state" : {
         "branch" : "main",
-        "revision" : "11e389d7d3b16b6eb7280eedf2e24abb15ce330a"
+        "revision" : "c5c8989a38061818d2800ea55b595051b07db7a0"
       }
     },
     {
@@ -303,7 +213,7 @@
       "location" : "https://github.com/swift-atoms/swift-coder.git",
       "state" : {
         "branch" : "main",
-        "revision" : "e54e1552420ca1d0c2b3b0a207ea8184bf44d576"
+        "revision" : "80e8df1858653d60d22347ac9dd9df5fd609e6fc"
       }
     },
     {
@@ -312,7 +222,7 @@
       "location" : "https://github.com/swift-atoms/swift-collection.git",
       "state" : {
         "branch" : "main",
-        "revision" : "9e63d7a3a11a6d5628c91117c30456f5c3bb5353"
+        "revision" : "c5be5ee0d6b88c2893e910ee1b988751c902d91b"
       }
     },
     {
@@ -320,8 +230,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections.git",
       "state" : {
-        "revision" : "f96b909e1a9e469620bc5037c1e24e00153f376f",
-        "version" : "1.7.5"
+        "revision" : "88754449ab766a739610b660e117762115fabc9c",
+        "version" : "1.7.6"
       }
     },
     {
@@ -329,8 +239,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-configuration.git",
       "state" : {
-        "revision" : "5aa8bdb1ddd11de51cb30b0ba575f4b05a9a169d",
-        "version" : "1.4.0"
+        "revision" : "0b0c23215764302f7db752b079c024fbaff12e62",
+        "version" : "1.5.0"
       }
     },
     {
@@ -339,7 +249,7 @@
       "location" : "https://github.com/swift-atoms/swift-contramap.git",
       "state" : {
         "branch" : "main",
-        "revision" : "0752a1c18e25bec71580206a9638650c26760bb1"
+        "revision" : "583273251f086a4ed4cd4f021d1ee701c2506cf1"
       }
     },
     {
@@ -348,7 +258,7 @@
       "location" : "https://github.com/swift-atoms/swift-coordinate.git",
       "state" : {
         "branch" : "main",
-        "revision" : "88b6ce5ea92b85e48fb77d20f10929f72d81500d"
+        "revision" : "00c0890d1ff36d0dbfc13e88e2d5b480143b34e2"
       }
     },
     {
@@ -357,7 +267,7 @@
       "location" : "https://github.com/swift-atoms/swift-coproduct.git",
       "state" : {
         "branch" : "main",
-        "revision" : "836af34dcb7401c8a222635ff2b9271132e1da84"
+        "revision" : "a24873c8b46a5f7a0d98cf140115f02bb24a19b1"
       }
     },
     {
@@ -365,17 +275,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-crypto.git",
       "state" : {
-        "revision" : "c2cbadd7263439d8015189668f96ff5b5be565ce",
-        "version" : "5.0.3"
-      }
-    },
-    {
-      "identity" : "swift-currency",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/zunda-pixel/swift-currency.git",
-      "state" : {
-        "revision" : "476562c17ec5ed2d96794f13a24df86eb7bf96b5",
-        "version" : "0.0.1"
+        "revision" : "f8fad2f95ad67b45f6340c0960e2396094d67e07",
+        "version" : "5.1.1"
       }
     },
     {
@@ -384,7 +285,7 @@
       "location" : "https://github.com/swift-atoms/swift-cursor.git",
       "state" : {
         "branch" : "main",
-        "revision" : "d0650620d591ffb48c94110931fbc66971b3580d"
+        "revision" : "c53c501aace7b2e42322db19aab716696aa6d718"
       }
     },
     {
@@ -402,7 +303,7 @@
       "location" : "https://github.com/swift-atoms/swift-dependency.git",
       "state" : {
         "branch" : "main",
-        "revision" : "af4cc2ccebb2071d124d1d345859aef492fc4681"
+        "revision" : "a1b3cb7d90fa6609c5e08f48a47edeb278a4095b"
       }
     },
     {
@@ -411,7 +312,7 @@
       "location" : "https://github.com/swift-atoms/swift-difference.git",
       "state" : {
         "branch" : "main",
-        "revision" : "97397944d7f584c40f28166ea5730a5cf8827dba"
+        "revision" : "3ff1122904cc82626668b22587a643509da1897f"
       }
     },
     {
@@ -420,7 +321,7 @@
       "location" : "https://github.com/swift-atoms/swift-distance.git",
       "state" : {
         "branch" : "main",
-        "revision" : "1cf6e5950a1c32eb078bbc370cc751953e0054fc"
+        "revision" : "e8419baec7ab6d53e542940a81deb3d8f2dfee09"
       }
     },
     {
@@ -428,8 +329,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-distributed-tracing.git",
       "state" : {
-        "revision" : "789663680a3a4767e698be46bc154a3bc5c64fef",
-        "version" : "1.7.3"
+        "revision" : "9f982a7ec8dd815bf57024e39de592813ca14399",
+        "version" : "1.7.4"
       }
     },
     {
@@ -438,7 +339,7 @@
       "location" : "https://github.com/swift-atoms/swift-division.git",
       "state" : {
         "branch" : "main",
-        "revision" : "602241cb753bda1d2b51645d3ec085bf5abe70f3"
+        "revision" : "24f231166c4c7fc5504e586418d69af43bf3da27"
       }
     },
     {
@@ -447,7 +348,7 @@
       "location" : "https://github.com/swift-atoms/swift-either.git",
       "state" : {
         "branch" : "main",
-        "revision" : "c969747a21b8224499e97ab39a724cbb78c10340"
+        "revision" : "def6fec35e612e83dc39949b9f3ce25c3d3a421b"
       }
     },
     {
@@ -456,7 +357,7 @@
       "location" : "https://github.com/swift-atoms/swift-empty.git",
       "state" : {
         "branch" : "main",
-        "revision" : "1574b4e35f59f4d52b232f166c62db43d82ae8de"
+        "revision" : "091ad924079911ea25e97f5786e8a32236f70e6f"
       }
     },
     {
@@ -465,16 +366,7 @@
       "location" : "https://github.com/swift-atoms/swift-error.git",
       "state" : {
         "branch" : "main",
-        "revision" : "0ed3c5766ebee5cbe84ae6a074564ceccdc93879"
-      }
-    },
-    {
-      "identity" : "swift-extras-base64",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swift-extras/swift-extras-base64",
-      "state" : {
-        "revision" : "c803790ffc55c4b4f297f52ee6fbd5b0b3d046ef",
-        "version" : "1.2.0"
+        "revision" : "567f7a407bc0332365109970e773802095817487"
       }
     },
     {
@@ -483,7 +375,7 @@
       "location" : "https://github.com/swift-atoms/swift-finite.git",
       "state" : {
         "branch" : "main",
-        "revision" : "e1875a4d7dc5c21bca87fbdbbacf5ed5d11cfa74"
+        "revision" : "263da01f06e2c4187f4168fbc74a4dffcbfd5130"
       }
     },
     {
@@ -492,7 +384,7 @@
       "location" : "https://github.com/swift-atoms/swift-flatmap.git",
       "state" : {
         "branch" : "main",
-        "revision" : "1c7be6dfa8d81882263ab8cdb44a9523871fb5bc"
+        "revision" : "09683b5d0f67d3dc9a5fae4079b8d689b124bec2"
       }
     },
     {
@@ -507,7 +399,7 @@
     {
       "identity" : "swift-http-types",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-http-types",
+      "location" : "https://github.com/apple/swift-http-types.git",
       "state" : {
         "revision" : "bff4b6903cdc99dda49649dd52f46c11cfd3ed50",
         "version" : "1.8.0"
@@ -519,7 +411,7 @@
       "location" : "https://github.com/swift-atoms/swift-index.git",
       "state" : {
         "branch" : "main",
-        "revision" : "11851d8111529c6cafb0bcceb73edb69c7219399"
+        "revision" : "944a9a2936ea575e1ca284ac902f83ee562e7507"
       }
     },
     {
@@ -528,7 +420,7 @@
       "location" : "https://github.com/swift-atoms/swift-integer.git",
       "state" : {
         "branch" : "main",
-        "revision" : "db76be4213d1ee3383cbcffe9b0c28006c3284d5"
+        "revision" : "a0ccb94507c77e32a5045d74c48c38205b10d45d"
       }
     },
     {
@@ -537,7 +429,7 @@
       "location" : "https://github.com/swift-iso/swift-iso-8601.git",
       "state" : {
         "branch" : "main",
-        "revision" : "88f190bb606107660fec8d2e7bd8f4816176882f"
+        "revision" : "9cb6c3fb035342f1e3f436d279bcb2802d8d962e"
       }
     },
     {
@@ -546,7 +438,7 @@
       "location" : "https://github.com/swift-iso/swift-iso-9075.git",
       "state" : {
         "branch" : "main",
-        "revision" : "a8e0f3223cd0046adbd8545e7a290f61c12f6048"
+        "revision" : "86e897d6939562fc13a02ed443e3bf110e311821"
       }
     },
     {
@@ -564,7 +456,7 @@
       "location" : "https://github.com/swift-atoms/swift-iterator.git",
       "state" : {
         "branch" : "main",
-        "revision" : "c6eea9ab133a8a41abe9dfa24e62414c50f63ff7"
+        "revision" : "31e8385d13373a489765f00d8d4fbfe0bbb2c812"
       }
     },
     {
@@ -573,7 +465,7 @@
       "location" : "https://github.com/swift-atoms/swift-lazy.git",
       "state" : {
         "branch" : "main",
-        "revision" : "7108961daf2a86cc4130c8c7c4b9ba0e9170d577"
+        "revision" : "3e7c7538e6b8d3d319a56e99f7f920cd350fad95"
       }
     },
     {
@@ -581,8 +473,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log.git",
       "state" : {
-        "revision" : "c9c6bb9d275ec0d95c3ad16391f3f045dc623104",
-        "version" : "1.16.2"
+        "revision" : "e3da04078777e6a1b72ce19981fbd6539b0847d8",
+        "version" : "1.17.0"
       }
     },
     {
@@ -591,7 +483,7 @@
       "location" : "https://github.com/swift-atoms/swift-logic.git",
       "state" : {
         "branch" : "main",
-        "revision" : "b46116bd5f1b65cc76ebd3f9e57724a58e09a19a"
+        "revision" : "212c1f0e43ec4971bd5e55e3035e493d0e3d3fc0"
       }
     },
     {
@@ -600,7 +492,7 @@
       "location" : "https://github.com/swift-atoms/swift-magnitude.git",
       "state" : {
         "branch" : "main",
-        "revision" : "1cd739f40cdc88e689c38aa06c575d71522d33ab"
+        "revision" : "fd6fb5dc46ac0ce29170fa40bb0e62cb7a14bbf0"
       }
     },
     {
@@ -609,16 +501,7 @@
       "location" : "https://github.com/swift-atoms/swift-map.git",
       "state" : {
         "branch" : "main",
-        "revision" : "36a9ddba2e9ff1c7e07c211fdf4794bd7ec247d1"
-      }
-    },
-    {
-      "identity" : "swift-memberwise-init-macro",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gohanlon/swift-memberwise-init-macro",
-      "state" : {
-        "revision" : "d0fb82bb6638051524214fb54524bfcd876735a1",
-        "version" : "0.6.0"
+        "revision" : "968cfc79f7612ffaeb1f6223e9965ff0657b2730"
       }
     },
     {
@@ -627,7 +510,7 @@
       "location" : "https://github.com/swift-atoms/swift-memory.git",
       "state" : {
         "branch" : "main",
-        "revision" : "d4b587fc49998414a3886650e26cb8599766b2bb"
+        "revision" : "e1038a761a161e718d1c4a999b3435679a15d2c1"
       }
     },
     {
@@ -645,7 +528,7 @@
       "location" : "https://github.com/swift-atoms/swift-multiplication.git",
       "state" : {
         "branch" : "main",
-        "revision" : "6921353ebe780d5aa79cff92d9c53aa1863d4d19"
+        "revision" : "1beb5026d1bd3b6c264fe942ce1f41e69914b343"
       }
     },
     {
@@ -653,8 +536,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
       "state" : {
-        "revision" : "6db9d9abd92ad7399b8a564cafbb87d3507245fa",
-        "version" : "2.104.0"
+        "revision" : "2f58d8ef84438d6517fc78bcea2f8527e3c72936",
+        "version" : "2.105.0"
       }
     },
     {
@@ -680,8 +563,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio-ssl.git",
       "state" : {
-        "revision" : "322f3c2a4a21df31c84ca416bf65ee5e9059e440",
-        "version" : "2.37.5"
+        "revision" : "15e0b9e495786807272dd4891fa4bac76aa43034",
+        "version" : "2.37.6"
       }
     },
     {
@@ -705,10 +588,10 @@
     {
       "identity" : "swift-openapi-generator",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-openapi-generator",
+      "location" : "https://github.com/apple/swift-openapi-generator.git",
       "state" : {
-        "revision" : "75962579db43e88440bbad021c74570f0955d1fd",
-        "version" : "1.14.3"
+        "revision" : "fbf4512ebc69ccbca33aa3c5fa4393887e687b76",
+        "version" : "1.14.4"
       }
     },
     {
@@ -723,10 +606,10 @@
     {
       "identity" : "swift-openapi-runtime",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-openapi-runtime",
+      "location" : "https://github.com/apple/swift-openapi-runtime.git",
       "state" : {
-        "revision" : "6927ad435adf4d00fe55fc61b9a07a04673c79c8",
-        "version" : "1.13.3"
+        "revision" : "b9ebb3f06f1dac717156a04f0919ad444cbcf8f5",
+        "version" : "1.13.4"
       }
     },
     {
@@ -735,7 +618,7 @@
       "location" : "https://github.com/swift-atoms/swift-operation.git",
       "state" : {
         "branch" : "main",
-        "revision" : "bc3de67ecf9879f776821c202a34237b535136d8"
+        "revision" : "f1514c2d6a3ab727961a00f61160226bf0bc90b2"
       }
     },
     {
@@ -744,7 +627,7 @@
       "location" : "https://github.com/swift-atoms/swift-optic.git",
       "state" : {
         "branch" : "main",
-        "revision" : "32895bb4ce5471618ba75caba6648e3fa19e8250"
+        "revision" : "c9e4ec6ccbd38d0e800cf312d6b532afc00914fd"
       }
     },
     {
@@ -753,7 +636,7 @@
       "location" : "https://github.com/swift-atoms/swift-order.git",
       "state" : {
         "branch" : "main",
-        "revision" : "13f7202d5a59378df720c88bcf1e196ccd16370b"
+        "revision" : "58ed2dedb85630ee671ebdec7309f1773d308980"
       }
     },
     {
@@ -762,7 +645,7 @@
       "location" : "https://github.com/swift-atoms/swift-ordinal.git",
       "state" : {
         "branch" : "main",
-        "revision" : "27abd2fd4b0df24f242e8164e2d221c1a69dd37d"
+        "revision" : "0d14d08601c9e78f130f1e9a80fa75b057670532"
       }
     },
     {
@@ -780,7 +663,7 @@
       "location" : "https://github.com/swift-atoms/swift-ownership.git",
       "state" : {
         "branch" : "main",
-        "revision" : "e82929748e9e59840a307e6f8640d691124d9c67"
+        "revision" : "ecc33da1039ffbe393759cc2c648146727709f9a"
       }
     },
     {
@@ -789,7 +672,7 @@
       "location" : "https://github.com/swift-atoms/swift-pair.git",
       "state" : {
         "branch" : "main",
-        "revision" : "1991d701193020bfac43f1fe475ccdc3d3a36918"
+        "revision" : "1d3f004b6e12c052e806e84fc510b6df48bb5a27"
       }
     },
     {
@@ -798,7 +681,7 @@
       "location" : "https://github.com/swift-atoms/swift-parser.git",
       "state" : {
         "branch" : "main",
-        "revision" : "652ba46e2e8a0857f385f0ded55c35421dabb74e"
+        "revision" : "5df5fb7d9102b6357385d08b237bf7fa99883d6b"
       }
     },
     {
@@ -807,16 +690,15 @@
       "location" : "https://github.com/swift-atoms/swift-polarity.git",
       "state" : {
         "branch" : "main",
-        "revision" : "a21aa0fc82067f69284b3e8c280d28bf3bfafc8a"
+        "revision" : "fb4188030311d3602e9d79652580770be4690688"
       }
     },
     {
       "identity" : "swift-postgresql",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/zunda-pixel/swift-postgresql.git",
+      "location" : "https://github.com/swift-compositions/swift-postgresql.git",
       "state" : {
-        "branch" : "fix-postgresql-closure-lifetime",
-        "revision" : "e5dca9dca136f5dd646bc98e2f3cdf1090430e26"
+        "revision" : "837a5c0d43b495372c17de08d5f187f6819601b0"
       }
     },
     {
@@ -825,7 +707,7 @@
       "location" : "https://github.com/swift-atoms/swift-predecessor.git",
       "state" : {
         "branch" : "main",
-        "revision" : "7e7452a7f52f5e09f69f5533fe03877df746ddc4"
+        "revision" : "88c413dfacf48663aa58ae9c6a91269d82d949a6"
       }
     },
     {
@@ -834,7 +716,7 @@
       "location" : "https://github.com/swift-atoms/swift-predicate.git",
       "state" : {
         "branch" : "main",
-        "revision" : "8d0a86ae9ea7e948d8c4273c20a65086a9527c24"
+        "revision" : "e2920ffa15eb4b979116e171053c08921882922c"
       }
     },
     {
@@ -843,7 +725,7 @@
       "location" : "https://github.com/swift-atoms/swift-product.git",
       "state" : {
         "branch" : "main",
-        "revision" : "38df162a5331d745a3bf9e2ba0718133df2842cb"
+        "revision" : "61a5884052776508a8d9ae328d620456d279a8aa"
       }
     },
     {
@@ -852,7 +734,7 @@
       "location" : "https://github.com/swift-atoms/swift-property.git",
       "state" : {
         "branch" : "main",
-        "revision" : "1666dd362f7b67bbc0a5c3fa6971229e184dfe91"
+        "revision" : "099112e94920961d63d1cec10b21668b09221d14"
       }
     },
     {
@@ -860,8 +742,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-protobuf.git",
       "state" : {
-        "revision" : "3d537cb81aef272a03cb3be815439e9bf0eb3bd3",
-        "version" : "1.39.0"
+        "revision" : "fed2f76413026cb0ae90999a8c9116949dfe6aa6",
+        "version" : "1.41.0"
       }
     },
     {
@@ -870,7 +752,7 @@
       "location" : "https://github.com/swift-atoms/swift-ratio.git",
       "state" : {
         "branch" : "main",
-        "revision" : "69d6d545f783070d1d831ef3f3cf9772c440d279"
+        "revision" : "c3e521a45b99bdd54798ba84aaef819b9f5e516c"
       }
     },
     {
@@ -879,7 +761,7 @@
       "location" : "https://github.com/swift-atoms/swift-rational.git",
       "state" : {
         "branch" : "main",
-        "revision" : "9eb0d4c3ec2142f815133585a6ed2eaf84557142"
+        "revision" : "25bf19f432269cffd1f59eba1d8d4590d84535f6"
       }
     },
     {
@@ -888,7 +770,7 @@
       "location" : "https://github.com/swift-atoms/swift-repetition.git",
       "state" : {
         "branch" : "main",
-        "revision" : "45fb8b0c4b3fb6d2073f3f6d8dc414f00ddb498c"
+        "revision" : "4c17867ca74c03a9eb3171206db7ca22a0941ef0"
       }
     },
     {
@@ -897,7 +779,7 @@
       "location" : "https://github.com/swift-atoms/swift-retreat.git",
       "state" : {
         "branch" : "main",
-        "revision" : "5cd6a5dd615cb827ea04af9b236a8004effb3b01"
+        "revision" : "9ad3db32c5f47cb780ade35d2ad091fe7d1c94f4"
       }
     },
     {
@@ -906,7 +788,7 @@
       "location" : "https://github.com/swift-ietf/swift-rfc-4122.git",
       "state" : {
         "branch" : "main",
-        "revision" : "b3df205c2204acde1112a20e0580f1cf762d6b00"
+        "revision" : "76378b5ad1b98a39ef2394faaeafc702964c2596"
       }
     },
     {
@@ -915,7 +797,7 @@
       "location" : "https://github.com/swift-atoms/swift-rounding.git",
       "state" : {
         "branch" : "main",
-        "revision" : "db8338602d5247318c02c06d901604119c7c425c"
+        "revision" : "7adeb6d61a84ee8528cdbd06256475f02dd43094"
       }
     },
     {
@@ -924,7 +806,7 @@
       "location" : "https://github.com/swift-atoms/swift-search.git",
       "state" : {
         "branch" : "main",
-        "revision" : "fedbcb1e1537fe6f65bce8940892abd1e1ecb70c"
+        "revision" : "0fde77de6c047f8ad001d50377a8154485711727"
       }
     },
     {
@@ -933,7 +815,7 @@
       "location" : "https://github.com/swift-atoms/swift-sequence.git",
       "state" : {
         "branch" : "main",
-        "revision" : "846c867a3185ce0e2e25455bf750eb5fffc9a1cd"
+        "revision" : "7f63d5ddaa60b49fb8ce7a9b8db833423c7384ec"
       }
     },
     {
@@ -942,7 +824,7 @@
       "location" : "https://github.com/swift-atoms/swift-serializer.git",
       "state" : {
         "branch" : "main",
-        "revision" : "68de3d00647384c5440da4c23010f6ce71844296"
+        "revision" : "9d6f7fde79c257480aaa6264f2f01214ae601e4e"
       }
     },
     {
@@ -969,7 +851,7 @@
       "location" : "https://github.com/swift-atoms/swift-single.git",
       "state" : {
         "branch" : "main",
-        "revision" : "a5ad0cf514d124c062f18f91811729fb6c230b0c"
+        "revision" : "be60c9f3ba5d5bda372159e077ffb36bf815d4de"
       }
     },
     {
@@ -978,7 +860,7 @@
       "location" : "https://github.com/swift-atoms/swift-skip.git",
       "state" : {
         "branch" : "main",
-        "revision" : "e98929507d7c17ea941bd796646febf367ac74df"
+        "revision" : "7af7ea20decb626a81d81fe636d7e58e7020e940"
       }
     },
     {
@@ -996,7 +878,7 @@
       "location" : "https://github.com/swift-atoms/swift-span.git",
       "state" : {
         "branch" : "main",
-        "revision" : "406185447a6e3e9f637c9b2f746984ca2663ce69"
+        "revision" : "c130d8a179b481fe517394d2ee39d0ccc7fac8e3"
       }
     },
     {
@@ -1005,7 +887,7 @@
       "location" : "https://github.com/swift-compositions/swift-sql.git",
       "state" : {
         "branch" : "main",
-        "revision" : "76b61c7adfa3159dba5353a8f8b05110112d0050"
+        "revision" : "6b32968758f840c76742d2a8b08d473da16c263c"
       }
     },
     {
@@ -1014,7 +896,7 @@
       "location" : "https://github.com/swift-atoms/swift-standard-library-extensions.git",
       "state" : {
         "branch" : "main",
-        "revision" : "6f12e79d7d0624311cace5b3d3694e1a2a87c574"
+        "revision" : "08555c8a2155aa70d34137abb1b583c3cb6828c8"
       }
     },
     {
@@ -1023,7 +905,7 @@
       "location" : "https://github.com/swift-atoms/swift-subtraction.git",
       "state" : {
         "branch" : "main",
-        "revision" : "c177725d8eb0c2b00aee6e3eecc7e10dfc2346e9"
+        "revision" : "3b29060ec9087fe5bef28f4d07a9dffd7ff8e735"
       }
     },
     {
@@ -1032,7 +914,7 @@
       "location" : "https://github.com/swift-atoms/swift-successor.git",
       "state" : {
         "branch" : "main",
-        "revision" : "e0377d5b49adaa05624ab2f0024ab39d478da651"
+        "revision" : "a4cd3f233cea1d483e9ad2d9bc08eec384d432bc"
       }
     },
     {
@@ -1049,8 +931,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-system.git",
       "state" : {
-        "revision" : "869129b7bf4ecc57b97d0193ad29690ca2134750",
-        "version" : "1.8.1"
+        "revision" : "640e5755b5826f4437eaeedd366fd776737db62c",
+        "version" : "1.9.0"
       }
     },
     {
@@ -1059,7 +941,7 @@
       "location" : "https://github.com/swift-atoms/swift-tagged.git",
       "state" : {
         "branch" : "main",
-        "revision" : "f200f9bcd27fd728f9d185708e9e068278520900"
+        "revision" : "44d5e7dd332d5376a43794b849edefc94a29c0d8"
       }
     },
     {
@@ -1068,7 +950,7 @@
       "location" : "https://github.com/swift-atoms/swift-time.git",
       "state" : {
         "branch" : "main",
-        "revision" : "34c173f60aa9472b94de9ff1b44cdc7e9cfbe0c3"
+        "revision" : "9990181c7785a4ff82bc038f23c85961bbf882f1"
       }
     },
     {
@@ -1077,7 +959,7 @@
       "location" : "https://github.com/swift-atoms/swift-translation.git",
       "state" : {
         "branch" : "main",
-        "revision" : "920c9773b066ea5e337c600a0ba0b2495773df2b"
+        "revision" : "3e7e5cb1b88e46251a730cc1fbfd0526c2c1fac2"
       }
     },
     {
@@ -1086,7 +968,7 @@
       "location" : "https://github.com/swift-atoms/swift-vector.git",
       "state" : {
         "branch" : "main",
-        "revision" : "fb57149ca2e772c180116c796fef36857814e41a"
+        "revision" : "18b9442d132c8e1d443c2bf122f611e41b8ebf40"
       }
     },
     {
@@ -1113,25 +995,7 @@
       "location" : "https://github.com/swift-atoms/swift-witness.git",
       "state" : {
         "branch" : "main",
-        "revision" : "7e57e6b5a21f8f56e851322c3fdff7d34f088256"
-      }
-    },
-    {
-      "identity" : "uuidv7",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/zunda-pixel/UUIDV7.git",
-      "state" : {
-        "branch" : "replace-to-swift-testing",
-        "revision" : "f9340a6f666e794a035d15df5be36bc091b60028"
-      }
-    },
-    {
-      "identity" : "valkey-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/valkey-io/valkey-swift.git",
-      "state" : {
-        "revision" : "541f50f8cb89fe8e15dbb50331be45f60a1d2f98",
-        "version" : "1.6.0"
+        "revision" : "71f302e2c43f8f51002d6abc503c7838bd9fd52d"
       }
     },
     {
