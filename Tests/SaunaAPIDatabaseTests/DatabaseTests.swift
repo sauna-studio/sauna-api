@@ -13,7 +13,7 @@ struct DatabaseTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = directory.appendingPathComponent("synthetic-fixture")
-        FileManager.default.createFile(atPath: file.path, contents: Data("noncredential-test-fixture".utf8), attributes: [.posixPermissions: 0o600])
+        try #require(FileManager.default.createFile(atPath: file.path, contents: Data("noncredential-test-fixture".utf8), attributes: [.posixPermissions: 0o600]))
         let env = ["PGPASSWORD_FILE": file.path]
         _ = try LocalDatabaseConfiguration(environment: env)
         return try body(env, file)
