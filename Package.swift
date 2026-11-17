@@ -3,7 +3,7 @@ import PackageDescription
 
 // Compiler policy follows the pinned blindlog-api reference; apply to our code,
 // not third-party targets. Keep explicit public/package imports at API boundaries.
-let apiSwiftSettings: [SwiftSetting] = [
+let swiftSettings: [SwiftSetting] = [
   .enableUpcomingFeature("ExistentialAny"),
   .enableUpcomingFeature("InternalImportsByDefault"),
   .enableUpcomingFeature("MemberImportVisibility"),
@@ -26,33 +26,41 @@ let package = Package(
     .library(name: "SaunaAPIIdentity", targets: ["SaunaAPIIdentity"]),
   ],
   dependencies: [
-    .package(url: "https://github.com/brokenhandsio/swift-cbor.git", exact: "0.3.0"),
-    .package(url: "https://github.com/apple/swift-nio.git", exact: "2.104.0"),
-    .package(url: "https://github.com/apple/swift-http-types", exact: "1.8.0"),
-    .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", exact: "2.13.0"),
+    .package(url: "https://github.com/brokenhandsio/swift-cbor.git", from: "0.3.0"),
+    .package(url: "https://github.com/apple/swift-nio.git", from: "2.104.0"),
+    .package(url: "https://github.com/apple/swift-http-types", from: "1.8.0"),
+    .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.13.0"),
+    .package(url: "https://github.com/apple/swift-distributed-tracing.git", from: "1.7.3"),
+    .package(url: "https://github.com/apple/swift-crypto.git", from: "5.0.3"),
+    .package(url: "https://github.com/apple/swift-openapi-generator.git", from: "1.14.3"),
+    .package(url: "https://github.com/apple/swift-openapi-runtime.git", from: "1.13.3"),
+    .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.28.1"),
+    .package(url: "https://github.com/apple/swift-log.git", from: "1.16.2"),
     .package(
-      url: "https://github.com/swift-otel/swift-otel.git", from: "1.0.0", traits: ["OTLPHTTP"]),
-    .package(url: "https://github.com/apple/swift-distributed-tracing.git", exact: "1.7.3"),
-    .package(url: "https://github.com/brokenhandsio/swift-webauthn.git", from: "1.0.0-beta.3"),
+      url: "https://github.com/hummingbird-project/swift-openapi-hummingbird",
+      from: "2.1.0"
+    ),
+    .package(
+      url: "https://github.com/swift-otel/swift-otel.git",
+      from: "1.0.0",
+      traits: ["OTLPHTTP"]
+    ),
+	.package(url: "https://github.com/brokenhandsio/swift-webauthn.git", from: "1.0.0-beta.3"),
     .package(
       url: "https://github.com/zunda-pixel/swift-postgresql.git",
-      branch: "fix-postgresql-closure-lifetime", traits: ["PostgresNIO"]),
+      branch: "fix-postgresql-closure-lifetime", traits: ["PostgresNIO"]
+    ),
     // Keep compatible SQL/ISO9075 revisions in Package.resolved until the PostgreSQL
     // adapter supports the new protocol; revision overrides conflict with main (#86).
     .package(url: "https://github.com/swift-compositions/swift-sql.git", branch: "main"),
     .package(
       url: "https://github.com/swift-iso/swift-iso-9075.git",
-      branch: "main"),
-    .package(url: "https://github.com/apple/swift-crypto.git", exact: "5.0.3"),
-    .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.14.3"),
-    .package(url: "https://github.com/apple/swift-openapi-runtime", exact: "1.13.3"),
-    .package(url: "https://github.com/hummingbird-project/hummingbird", exact: "2.28.1"),
-    .package(
-      url: "https://github.com/hummingbird-project/swift-openapi-hummingbird", exact: "2.1.0"),
+      branch: "main"
+    ),
     .package(
       url: "https://github.com/sauna-studio/postgres-nio.git",
-      revision: "1b9c2a873ee6c5dfa33bdb0370f3537c361e801f"),
-    .package(url: "https://github.com/apple/swift-log.git", exact: "1.16.2"),
+      revision: "1b9c2a873ee6c5dfa33bdb0370f3537c361e801f"
+    ),
   ],
   targets: [
     .target(
@@ -70,7 +78,7 @@ let package = Package(
         .product(name: "PostgresNIO", package: "postgres-nio"),
         .product(name: "Logging", package: "swift-log"),
       ],
-      swiftSettings: apiSwiftSettings
+      swiftSettings: swiftSettings
     ),
     .testTarget(
       name: "SaunaAPIIdentityTests",
@@ -92,14 +100,14 @@ let package = Package(
         .product(name: "PostgresNIO", package: "postgres-nio"),
         .product(name: "Logging", package: "swift-log"),
       ],
-      swiftSettings: apiSwiftSettings
+      swiftSettings: swiftSettings
     ),
     .executableTarget(
       name: "SaunaDBCheck",
       dependencies: [
         .target(name: "SaunaAPIDatabase")
       ],
-      swiftSettings: apiSwiftSettings
+      swiftSettings: swiftSettings
     ),
     .testTarget(
       name: "SaunaAPIDatabaseTests",
@@ -115,7 +123,7 @@ let package = Package(
       dependencies: [
         .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime")
       ],
-      swiftSettings: apiSwiftSettings,
+      swiftSettings: swiftSettings,
       plugins: [
         .plugin(name: "OpenAPIGenerator", package: "swift-openapi-generator")
       ]
@@ -136,7 +144,7 @@ let package = Package(
         .product(name: "Tracing", package: "swift-distributed-tracing"),
         .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
       ],
-      swiftSettings: apiSwiftSettings
+      swiftSettings: swiftSettings
     ),
     .executableTarget(
       name: "SaunaAPI",
@@ -148,7 +156,7 @@ let package = Package(
         .product(name: "PostgresNIO", package: "postgres-nio"),
         .product(name: "Hummingbird", package: "hummingbird"),
       ],
-      swiftSettings: apiSwiftSettings
+      swiftSettings: swiftSettings
     ),
     .testTarget(
       name: "SaunaAPIServerTests",
