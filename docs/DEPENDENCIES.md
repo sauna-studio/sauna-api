@@ -1,8 +1,18 @@
 # API dependency catalogue
 
-ユーザー指定のblindlog-api参照と追加ライブラリを、将来用の未使用分も含めPackage.swiftへ宣言する。Swift6.4/compiler policy・既存実装のtarget構成は維持し、解決revisionをPackage.resolvedへ固定する。未使用dependencyのSwiftPM警告は宣言を削除して隠さない。
+2026-11-17の最新ユーザー指示により、Saunaのtargetが直接使うproductとbuild pluginに必要なpackage宣言だけを残す。将来用catalogueの宣言維持方針は更新された。直接importするmoduleの依存は明示し、推移依存だけのための宣言を追加しない。実際のgraphはPackage.swift / Package.resolvedを正本とする。
 
-## 現在使用する基盤と将来用の宣言
+## 2026-11-17: manifest削減と互換lock
+
+未使用のArgumentParser、Currency、HummingbirdAuth、PostgresKit、JWTKit、Cloudflare、HummingbirdPostgres、Valkey、UUIDV7の9宣言を削除した。NIO、HTTPTypes、ServiceLifecycle、Crypto、Tracing、ISO9075などは直接importするため維持する。未使用機能を有効化する変更ではない。
+
+[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)でSQL依存の互換性を追跡する。swift-postgresql `e5dca9dca136f5dd646bc98e2f3cdf1090430e26` の旧Reader/Database witnessはISO9075 `86e897d6939562fc13a02ed443e3bf110e311821`のgeneric Thrown/Failure要件を満たさない。このためISO9075は `a8e0f3223cd0046adbd8545e7a290f61c12f6048`、SQLは `76b61c7adfa3159dba5353a8f8b05110112d0050` の互換組合せをlockで保持する。manifestのrevision指定とtargeted revision resolveは下位packageのmain指定と競合するため採用しない。依存更新時は既存の互換stateを保持し、graph整理後もこの2 stateが一致することを確認する。無制約の全branch更新を合格済みと扱わない。
+
+WebAuthnは[Issue49](https://github.com/sauna-studio/sauna-api/issues/49)記載のtag順序制約により `1.0.0-beta.3` / `38b75016ed3550c7b08b70af05538a807f507285` を維持する。旧beta-2とSwiftCBORへ戻っていないことを確認する。検証は `swift build --force-resolved-versions` / `swift test --force-resolved-versions` と使い捨てPostgreSQL18で実行する。
+
+恒久対応はclosure lifetime修正を維持したPostgreSQL adapterの新protocol対応を採用し、SQL/ISO9075を一緒に更新して通常resolve、frozen build/test、TypedSQLAdapterTestsと実DB統合を通すこと。依存更新と上流対応を再確認の契機とし、保持制約が不要になった時点でIssue86を解消する。
+
+## Historical catalogue adoption (before 2026-11-17 cleanup)
 
 Baseline PR #43 selects Hummingbird, OpenAPI Generator (build plugin), Runtime/adapter, PostgresNIO, Crypto and Logging. NIO/HTTPTypes/ServiceLifecycle are also transitively linked through that foundation. The dependency catalogue declares additional packages without selecting all their products. Stacked authentication PR #44 explicitly uses WebAuthn, new CBOR, the swift-postgresql PostgresNIO trait/rendering bridge, swift-sql/ISO and NIO/HTTPTypes/ServiceLifecycle. No old SwiftCBOR parser remains in the locked graph.
 
@@ -45,9 +55,9 @@ The catalogue baseline passed38 real-PostgreSQL host tests. The downstream authe
 SwiftPM6.4 currently warns that transitive upstream PostgresNIO URLs and the directly pinned fork share one identity. Package.resolved selects exactly one reviewed fork revision; no second PostgresNIO is linked. This is a known package-resolution warning, separate from intentional unused catalogue declarations. A future SwiftPM update may require public URL mirrors or upstream adoption of PR698; current own-source warning-as-error policy remains enabled.
 
 
-## Locked direct dependency evidence
+## Historical locked direct dependency evidence
 
-This is a technical source/license inventory of the 26 direct Package.swift declarations, not a claim that all transitive packages or every feature is used or verified. Evidence was read from each cached Git object at the exact Package.resolved revision (`git ls-tree` and `git show revision:path`), including full license text, appended exceptions and present NOTICE files. Source/target declarations were checked separately; version labels and the old blindlog reference do not substitute for locked source evidence.
+The following table is the historical technical source/license inventory of the 26 direct declarations before the 2026-11-17 cleanup, not a claim that all transitive packages or every feature is used or verified. Evidence was read from each cached Git object at the exact Package.resolved revision (`git ls-tree` and `git show revision:path`), including full license text, appended exceptions and present NOTICE files. Source/target declarations were checked separately; version labels and the old blindlog reference do not substitute for locked source evidence.
 
 A = selected by catalogue baseline PR43 (including its build plugin). B = already transitively used by that foundation and explicitly selected in PR44. C = declared/locked in PR43, with runtime or macro products selected by stacked authentication PR44. D = declared by the user instruction for future work, with no product selected by a Sauna target in either implementation. E = selected by PR70 for opt-in local HTTP tracing. Declaration alone does not activate external clients, exporters or authentication mechanisms.
 

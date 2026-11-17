@@ -18,11 +18,17 @@ ExistentialAny、InternalImportsByDefault、MemberImportVisibility、InferIsolat
 
 MemberImportVisibilityで見つかった欠落は定義moduleの直接importで直す。起動処理は固定Hummingbird版のrunService既定値（SIGTERM/SIGINT）を使い、transitive importのUnixSignal静的memberへ依存しない。strictMemorySafetyはコンパイラの検査であり、第三者libraryも含む完全なmemory safetyの証明とは記録しない。
 
-## Current adoption decisions
+## 2026-11-17 manifest cleanup
+
+最新ユーザー指示により、将来用の未使用9 package宣言を削除し、直接使用するproductとbuild pluginの宣言を残した。以下のcatalogue対応表は削除前の履歴として保持する。現在の宣言はPackage.swiftを参照する。
+
+PostgreSQL adapterとISO9075のprotocol不整合により、SQL `76b61c7adfa3159dba5353a8f8b05110112d0050` / ISO9075 `a8e0f3223cd0046adbd8545e7a290f61c12f6048` の互換lockを維持する。branch指定とのSwiftPM制約・更新/解消条件は[DEPENDENCIES.md](DEPENDENCIES.md#2026-11-17-manifest削減と互換lock)と[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)に記録する。固定blindlog参照や既存PostgresNIO修正forkを置き換える変更ではない。
+
+## Historical catalogue adoption decisions
 
 The fixed blindlog commit remains the historical architecture reference. Later explicit user instructions require declaring its dependency catalogue, including packages not yet used. The earlier assessment that WebAuthn and UUIDV7 were not added is superseded: both are declared and locked in Package.swift/Package.resolved. Declaration, linked runtime use, source review and license evidence are separate decisions.
 
-[DEPENDENCIES.md](DEPENDENCIES.md#locked-direct-dependency-evidence) records all 25 direct declarations at their actual locked revisions, including license/NOTICE files read from cached Git objects. The catalogue PR #43 preserves the existing runtime; stacked [authentication PR #44](https://github.com/sauna-studio/sauna-api/pull/44) selects additional products. An unused declaration does not enable its clients, exporters, login methods or external calls.
+[DEPENDENCIES.md](DEPENDENCIES.md#historical-locked-direct-dependency-evidence) records all 25 direct declarations at their actual locked revisions, including license/NOTICE files read from cached Git objects. The catalogue PR #43 preserves the existing runtime; stacked [authentication PR #44](https://github.com/sauna-studio/sauna-api/pull/44) selects additional products. An unused declaration does not enable its clients, exporters, login methods or external calls.
 
 | Package or group | Current decision |
 | --- | --- |

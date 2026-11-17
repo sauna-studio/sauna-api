@@ -1,5 +1,5 @@
 {
-  "originHash" : "0314d7fb96e38b749e4d555382a2de05d22cde3a75adac7e7c96bea688dfd80e",
+  "originHash" : "9540cba9c2455a002165548028505a1edc66568c77647e8f781a707a0e844813",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -8,33 +8,6 @@
       "state" : {
         "revision" : "d2dfb39bcb0fafd1834ec6e6334c1755360f856e",
         "version" : "1.37.0"
-      }
-    },
-    {
-      "identity" : "async-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/async-kit.git",
-      "state" : {
-        "revision" : "6bbb83cbf9d886623a967a965c8fb1b73e6566f9",
-        "version" : "1.22.0"
-      }
-    },
-    {
-      "identity" : "cloudflare-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/zunda-pixel/cloudflare-swift.git",
-      "state" : {
-        "revision" : "ed1ec02c70cdf301159d7a770b91d4c70763f81b",
-        "version" : "0.8.3"
-      }
-    },
-    {
-      "identity" : "http-client",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/zunda-pixel/http-client",
-      "state" : {
-        "revision" : "204056ee303e3479772134d181d8f4e06370d3b5",
-        "version" : "0.5.0"
       }
     },
     {
@@ -47,42 +20,6 @@
       }
     },
     {
-      "identity" : "hummingbird-auth",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hummingbird-project/hummingbird-auth.git",
-      "state" : {
-        "revision" : "b94ab03d76ce9d7c7162fbf8898d76877f623392",
-        "version" : "2.5.0"
-      }
-    },
-    {
-      "identity" : "hummingbird-postgres",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hummingbird-project/hummingbird-postgres.git",
-      "state" : {
-        "revision" : "c1674a4eaef71440df8a05538d937eb0e6609227",
-        "version" : "1.1.0"
-      }
-    },
-    {
-      "identity" : "jwt-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/jwt-kit.git",
-      "state" : {
-        "revision" : "ae8f53decd49e3272d56714556362351d8b02807",
-        "version" : "5.9.0"
-      }
-    },
-    {
-      "identity" : "multipart-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/multipart-kit",
-      "state" : {
-        "revision" : "66b94723fd279ade478677c5253ccf89f13e152a",
-        "version" : "5.0.0-beta.3"
-      }
-    },
-    {
       "identity" : "openapikit",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mattpolzin/OpenAPIKit",
@@ -92,38 +29,11 @@
       }
     },
     {
-      "identity" : "postgres-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/postgres-kit.git",
-      "state" : {
-        "revision" : "139b0c4712d97eaec09d97afd592d394cdb9dbde",
-        "version" : "2.17.0"
-      }
-    },
-    {
-      "identity" : "postgres-migrations",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hummingbird-project/postgres-migrations",
-      "state" : {
-        "revision" : "90d8fd9e365c26c0a0f4cbe498fdf10532704419",
-        "version" : "1.2.0"
-      }
-    },
-    {
       "identity" : "postgres-nio",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sauna-studio/postgres-nio.git",
       "state" : {
         "revision" : "1b9c2a873ee6c5dfa33bdb0370f3537c361e801f"
-      }
-    },
-    {
-      "identity" : "sql-kit",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/vapor/sql-kit.git",
-      "state" : {
-        "revision" : "3779cedb44b1f374f2cca261c6d28f206024a582",
-        "version" : "3.36.0"
       }
     },
     {
@@ -370,15 +280,6 @@
       }
     },
     {
-      "identity" : "swift-currency",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/zunda-pixel/swift-currency.git",
-      "state" : {
-        "revision" : "476562c17ec5ed2d96794f13a24df86eb7bf96b5",
-        "version" : "0.0.1"
-      }
-    },
-    {
       "identity" : "swift-cursor",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swift-atoms/swift-cursor.git",
@@ -469,15 +370,6 @@
       }
     },
     {
-      "identity" : "swift-extras-base64",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swift-extras/swift-extras-base64",
-      "state" : {
-        "revision" : "c803790ffc55c4b4f297f52ee6fbd5b0b3d046ef",
-        "version" : "1.2.0"
-      }
-    },
-    {
       "identity" : "swift-finite",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swift-atoms/swift-finite.git",
@@ -546,7 +438,7 @@
       "location" : "https://github.com/swift-iso/swift-iso-9075.git",
       "state" : {
         "branch" : "main",
-        "revision" : "86e897d6939562fc13a02ed443e3bf110e311821"
+        "revision" : "a8e0f3223cd0046adbd8545e7a290f61c12f6048"
       }
     },
     {
@@ -610,15 +502,6 @@
       "state" : {
         "branch" : "main",
         "revision" : "968cfc79f7612ffaeb1f6223e9965ff0657b2730"
-      }
-    },
-    {
-      "identity" : "swift-memberwise-init-macro",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gohanlon/swift-memberwise-init-macro",
-      "state" : {
-        "revision" : "d0fb82bb6638051524214fb54524bfcd876735a1",
-        "version" : "0.6.0"
       }
     },
     {
@@ -1005,7 +888,7 @@
       "location" : "https://github.com/swift-compositions/swift-sql.git",
       "state" : {
         "branch" : "main",
-        "revision" : "6b32968758f840c76742d2a8b08d473da16c263c"
+        "revision" : "76b61c7adfa3159dba5353a8f8b05110112d0050"
       }
     },
     {
@@ -1103,8 +986,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/brokenhandsio/swift-webauthn.git",
       "state" : {
-        "revision" : "030acd1eedaa835958ae3fcc0e491bec03b2abf1",
-        "version" : "1.0.0-beta-2"
+        "revision" : "38b75016ed3550c7b08b70af05538a807f507285",
+        "version" : "1.0.0-beta.3"
       }
     },
     {
@@ -1114,33 +997,6 @@
       "state" : {
         "branch" : "main",
         "revision" : "71f302e2c43f8f51002d6abc503c7838bd9fd52d"
-      }
-    },
-    {
-      "identity" : "swiftcbor",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/unrelentingtech/SwiftCBOR.git",
-      "state" : {
-        "revision" : "fd929a6d8f7651ce0f63fc99397fd5762358cc29",
-        "version" : "0.6.0"
-      }
-    },
-    {
-      "identity" : "uuidv7",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/zunda-pixel/UUIDV7.git",
-      "state" : {
-        "branch" : "replace-to-swift-testing",
-        "revision" : "f9340a6f666e794a035d15df5be36bc091b60028"
-      }
-    },
-    {
-      "identity" : "valkey-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/valkey-io/valkey-swift.git",
-      "state" : {
-        "revision" : "541f50f8cb89fe8e15dbb50331be45f60a1d2f98",
-        "version" : "1.6.0"
       }
     },
     {
