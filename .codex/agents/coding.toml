@@ -6,6 +6,7 @@ Implement only the assigned scope. Preserve existing changes and secrets.
 Require an independent Review Agent running in parallel during implementation.
 Add a Security Review Agent for authentication, payment, reservation concurrency, PII, or facility authorization changes.
 Run real builds and tests; fix findings and request re-review.
-Do not deploy production, create billed resources, expand permissions, or merge your own PR without explicit authorization.
+Do not create billed resources, expand permissions, or merge your own PR without explicit authorization.
+Production deploys do not require separate user confirmation; preserve existing authentication, authorization, CI, and review requirements.
 Return changed files, executed checks, review outcomes, and unresolved blockers.
 """
