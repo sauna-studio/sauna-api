@@ -1,5 +1,5 @@
 {
-  "originHash" : "9540cba9c2455a002165548028505a1edc66568c77647e8f781a707a0e844813",
+  "originHash" : "49fb08c7f3df0ed67d6062250d37a02b27cbccbf210444eceaf443c974fcbee2",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -438,7 +438,7 @@
       "location" : "https://github.com/swift-iso/swift-iso-9075.git",
       "state" : {
         "branch" : "main",
-        "revision" : "a8e0f3223cd0046adbd8545e7a290f61c12f6048"
+        "revision" : "86e897d6939562fc13a02ed443e3bf110e311821"
       }
     },
     {
@@ -888,7 +888,7 @@
       "location" : "https://github.com/swift-compositions/swift-sql.git",
       "state" : {
         "branch" : "main",
-        "revision" : "76b61c7adfa3159dba5353a8f8b05110112d0050"
+        "revision" : "6b32968758f840c76742d2a8b08d473da16c263c"
       }
     },
     {
@@ -986,8 +986,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/brokenhandsio/swift-webauthn.git",
       "state" : {
-        "revision" : "38b75016ed3550c7b08b70af05538a807f507285",
-        "version" : "1.0.0-beta.3"
+        "revision" : "030acd1eedaa835958ae3fcc0e491bec03b2abf1",
+        "version" : "1.0.0-beta-2"
       }
     },
     {
@@ -997,6 +997,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "71f302e2c43f8f51002d6abc503c7838bd9fd52d"
+      }
+    },
+    {
+      "identity" : "swiftcbor",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/unrelentingtech/SwiftCBOR.git",
+      "state" : {
+        "revision" : "fd929a6d8f7651ce0f63fc99397fd5762358cc29",
+        "version" : "0.6.0"
       }
     },
     {
