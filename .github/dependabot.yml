@@ -28,6 +28,12 @@ updates:
     directory: /scripts
     schedule:
       interval: weekly
+    groups:
+      # Pydantic pins its core exactly; validate the settings integration with it.
+      pydantic:
+        patterns:
+          - "pydantic"
+          - "pydantic-*"
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
