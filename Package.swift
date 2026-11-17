@@ -40,7 +40,7 @@ let package = Package(
         .package(url: "https://github.com/valkey-io/valkey-swift.git", from: "1.3.0"),
         .package(url: "https://github.com/swift-otel/swift-otel.git", from: "1.0.0", traits: ["OTLPHTTP"]),
         .package(url: "https://github.com/apple/swift-distributed-tracing.git", exact: "1.7.3"),
-        .package(url: "https://github.com/brokenhandsio/swift-webauthn.git", revision: "38b75016ed3550c7b08b70af05538a807f507285"),
+        .package(url: "https://github.com/brokenhandsio/swift-webauthn.git", from: "1.0.0-beta.3"),
         .package(url: "https://github.com/zunda-pixel/UUIDV7.git", branch: "replace-to-swift-testing"),
         .package(url: "https://github.com/zunda-pixel/swift-postgresql.git", branch: "fix-postgresql-closure-lifetime", traits: ["PostgresNIO"]),
         .package(url: "https://github.com/swift-compositions/swift-sql.git", branch: "main"),

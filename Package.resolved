@@ -1,5 +1,5 @@
 {
-  "originHash" : "fae0ecd7ab6bbcf3c393fedcaf7058ee261c05b03294ff5d8ea6eba9f0aa4727",
+  "originHash" : "0314d7fb96e38b749e4d555382a2de05d22cde3a75adac7e7c96bea688dfd80e",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -1103,7 +1103,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/brokenhandsio/swift-webauthn.git",
       "state" : {
-        "revision" : "38b75016ed3550c7b08b70af05538a807f507285"
+        "revision" : "38b75016ed3550c7b08b70af05538a807f507285",
+        "version" : "1.0.0-beta.3"
       }
     },
     {
