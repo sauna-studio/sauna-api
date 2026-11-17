@@ -12,6 +12,8 @@ SQL描画は公式[swift-compositions/swift-postgresql@837a5c0](https://github.c
 
 OpenAPI Runtime1.13.4の406 ProblemDetailsが入力を反映するため、PublicErrorMiddlewareでthrowされたエラーは400...599のstatus codeだけを標準Statusへ変換し、body/headerを返さない。未知エラーは空500、キャンセルは伝播する。正常returnされたtyped503・認証problem・cookieは保持する。これは依存の旧版固定ではなく、Saunaの公開応答policyである。
 
+追加のlock再生成でswift-sqlを`18b0dcc3bff13d25bbe0e6d36defe59192d341c3`へ更新した。上流のSQL Test Supportが新しいtest library群へ移行したため23pin増え、graphは135pinとなる。追加packageは各固定revisionのApache-2.0ライセンスを確認済み。Saunaが選ぶSQL / SQL Macros / SQL Foundation Integrationのproduction targetへ依存edgeは追加されず、認証SQLのbind・transaction境界も変更しない。他の既存pinは維持する。
+
 WebAuthnは上流[Issue135](https://github.com/brokenhandsio/swift-webauthn/issues/135)で競合する`1.0.0-beta-2`タグが削除されたため、`from: "1.0.0-beta.3"`へ戻す。lockはPR128を含む`38b75016ed3550c7b08b70af05538a807f507285`を維持する。PostgresNIO修正forkも維持する。SQL旧版lock/Runtime旧版への一時復元は以下の履歴であり、現在のgraphはPackage.swift/Package.resolvedを参照する。[Issue86](https://github.com/sauna-studio/sauna-api/issues/86)で移行と検証結果を追跡する。
 
 ## Historical 2026-11-17 manifest cleanup and compatible locks
@@ -52,7 +54,7 @@ swift-postgresqlはユーザー指定`fix-postgresql-closure-lifetime`とPostgre
 
 ## 検証
 
-Use `swift package resolve` and `swift test --force-resolved-versions` when changing actual dependencies. The current graph has 112 resolved pins. Historical test counts below apply to their recorded revisions. Validate current changes against the latest head.
+Use `swift package resolve` and `swift test --force-resolved-versions` when changing actual dependencies. The current graph has 135 resolved pins. Historical test counts below apply to their recorded revisions. Validate current changes against the latest head.
 
 For documentation-only corrections, validate locked-source/license evidence, links, repository policy and diff. Dependency changes also require the current graph's application build/tests. Database integration tests require the approved private password file; an unconfigured skip is not a successful database check.
 
