@@ -201,6 +201,25 @@ struct PasskeyVerifierTests {
         }
     }
 
+    @Test func trailingCBORItemsAreRejectedByRegistrationAndAssertion() async throws {
+        let virtual = VirtualPasskey()
+        var envelope = try #require(JSONSerialization.jsonObject(with: virtual.registration()) as? [String: Any])
+        var response = try #require(envelope["response"] as? [String: Any])
+        let encoded = try #require(response["attestationObject"] as? String)
+        let bytes = try authDecode(encoded, maximum: 65_536)
+        response["attestationObject"] = authEncode(bytes + Data([0xa0]))
+        envelope["response"] = response
+        let payload = try JSONSerialization.data(withJSONObject: envelope)
+        let verifier = try LivePasskeyVerifier(origin: "http://localhost:5173")
+        await expectRejected {
+            _ = try await verifier.verifyRegistration(credentialJSON: payload, challenge: fixtureChallenge) { _ in true }
+        }
+        let stored = StoredPasskeyCredential(credentialID: virtual.id, userHandle: fixtureHandle, publicKeyCOSE: virtual.cose + Data([0xa0]), signCount: 0, backupEligible: false)
+        await expectRejected {
+            _ = try verifier.verifyAssertion(credentialJSON: virtual.assertion(), challenge: fixtureChallenge, storedCredential: stored)
+        }
+    }
+
     @Test func CBORFramingRejectsUnsupportedOrOversizedContainersBeforeDecoding() throws {
         let inputs: [[UInt8]] = [
             [], [0x81, 0], [0x9f, 0xff], [0xc0, 0], [0xf6],
