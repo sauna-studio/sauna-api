@@ -19,4 +19,4 @@ six==1.17.0
 typing-inspection==0.4.5
 typing_extensions==4.16.0
 
-pglast==8.7
+pglast==8.8
